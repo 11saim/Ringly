@@ -191,8 +191,24 @@
   0%, 100% { opacity: 1; }
   50% { opacity: 0.4; }
 }
+@keyframes slide-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
 @utility animate-blob { animation: blob-drift 18s ease-in-out infinite; }
 @utility animate-bubble { animation: bubble-bob var(--dur, 8s) ease-in-out infinite; }
 @utility animate-fade-up { animation: fade-up 0.7s ease-out both; }
 @utility animate-marquee { animation: marquee 40s linear infinite; }
 @utility animate-pulse-dot { animation: pulse-dot 2s ease-in-out infinite; }
+@utility animate-slide-in { animation: slide-in 0.3s ease-out both; }
+@utility animate-fade-in { animation: fade-in 0.2s ease-out both; }
+
+@keyframes wave-bar {
+  0%, 100% { height: 15%; }
+  50% { height: 85%; }
+}
+@utility animate-wave-bar { animation: wave-bar ease-in-out infinite; }

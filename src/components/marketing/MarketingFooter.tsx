@@ -3,13 +3,13 @@ import Link from "next/link";
 export function MarketingFooter() {
   return (
     <footer className="border-t border-border bg-white">
-      <div className="mx-auto max-w-6xl px-6 py-16 grid grid-cols-2 md:grid-cols-5 gap-10 text-sm">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 py-10 sm:py-16 grid grid-cols-2 md:grid-cols-5 gap-6 sm:gap-8 md:gap-10 text-sm">
         <div className="col-span-2">
           <div className="flex items-center gap-2 font-bold tracking-tight">
             <span className="grid h-7 w-7 place-items-center rounded-[8px] bg-primary text-primary-foreground font-mono text-sm">⌘</span>
             Ringly
           </div>
-          <p className="mt-3 max-w-xs text-muted-foreground">AI agents that sell and book for small businesses. Live on WhatsApp and voice in minutes.</p>
+          <p className="mt-3 max-w-xs text-muted-foreground text-sm">AI agents that sell and book for small businesses. Live on WhatsApp and voice in minutes.</p>
         </div>
         <div>
           <div className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Product</div>
@@ -37,7 +37,7 @@ export function MarketingFooter() {
         </div>
       </div>
       <div className="border-t border-border">
-        <div className="mx-auto max-w-6xl px-6 py-6 flex flex-col md:flex-row items-center justify-between text-xs text-muted-foreground gap-3">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 py-4 sm:py-6 flex flex-col sm:flex-row items-center justify-between text-xs text-muted-foreground gap-3">
           <div>&copy; {new Date().getFullYear()} Ringly, Inc.</div>
           <div className="flex gap-5">
             <Link href="/">Privacy</Link>
