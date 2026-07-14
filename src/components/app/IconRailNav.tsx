@@ -12,8 +12,6 @@ import {
   Phone,
   Settings as SettingsIcon,
   LogOut,
-  Moon,
-  Sun,
   Menu,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -28,7 +26,7 @@ const navItems = [
   { to: "/numbers", icon: Phone, label: "Numbers" },
 ] as const;
 
-export function Sidebar({ isDark, theme, onToggleTheme }: { isDark: boolean; theme: string; onToggleTheme: () => void }) {
+export function Sidebar() {
   const pathname = usePathname();
 
   const nav = (
@@ -61,14 +59,6 @@ export function Sidebar({ isDark, theme, onToggleTheme }: { isDark: boolean; the
       </nav>
 
       <div className="border-t border-border px-3 py-3 space-y-1">
-        <button
-          type="button"
-          onClick={onToggleTheme}
-          className="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-hover hover:text-foreground transition-colors"
-        >
-          {isDark ? <Sun size={18} /> : <Moon size={18} />}
-          <span className="hidden lg:block">{theme === "system" ? "System" : isDark ? "Light mode" : "Dark mode"}</span>
-        </button>
         <Link
           href="/settings"
           className={`flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
