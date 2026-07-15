@@ -32,7 +32,7 @@ export function MarketingHeader() {
     >
       <div className="mx-auto flex h-14 sm:h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
         <Link href="/" className="flex items-center gap-2 font-bold tracking-tight">
-          <span className="grid h-7 w-7 place-items-center rounded-[8px] bg-primary text-primary-foreground font-mono text-sm">
+          <span className="grid h-8 w-8 place-items-center rounded-full bg-primary text-primary-foreground font-mono text-sm">
             ⌘
           </span>
           <span className="text-lg">Ringly</span>
@@ -71,7 +71,7 @@ export function MarketingHeader() {
               <div className="flex flex-col h-full">
                 <div className="flex items-center gap-2 px-6 py-4 border-b border-border">
                   <Link href="/" className="flex items-center gap-2 font-bold tracking-tight" onClick={() => setOpen(false)}>
-                    <span className="grid h-7 w-7 place-items-center rounded-[8px] bg-primary text-primary-foreground font-mono text-sm">⌘</span>
+                    <span className="grid h-8 w-8 place-items-center rounded-full bg-primary text-primary-foreground font-mono text-sm">⌘</span>
                     <span className="text-lg">Ringly</span>
                   </Link>
                 </div>
@@ -81,7 +81,7 @@ export function MarketingHeader() {
                       key={link.label}
                       href={link.href}
                       onClick={() => setOpen(false)}
-                      className="rounded-lg px-3 py-2.5 text-sm font-medium text-foreground/80 hover:bg-[color:var(--surface-2)] hover:text-foreground transition-colors"
+                      className="rounded-full px-3 py-2.5 text-sm font-medium text-foreground/80 hover:bg-[color:var(--surface-2)] hover:text-foreground transition-colors"
                     >
                       {link.label}
                     </Link>

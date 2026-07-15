@@ -22,7 +22,7 @@ export default function Dashboard() {
   return (
     <AppShell title="Overview" subtitle="Bloom Studio · Growth plan">
       {/* Greeting banner */}
-      <div className="rounded-xl border border-border bg-card p-6">
+      <div className="rounded-3xl border border-border bg-card p-6 shadow-sm">
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <span className="h-1.5 w-1.5 rounded-full bg-success animate-pulse" />
           Agent online · {now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
@@ -55,7 +55,7 @@ export default function Dashboard() {
       {/* Main grid */}
       <div className="grid lg:grid-cols-3 gap-4">
         {/* Realtime activity */}
-        <div className="lg:col-span-2 rounded-xl border border-border bg-card">
+        <div className="lg:col-span-2 overflow-hidden rounded-3xl border border-border bg-card shadow-sm">
           <div className="flex items-center justify-between border-b border-border px-5 py-3">
             <div className="flex items-center gap-2">
               <span className="text-sm font-semibold">Realtime activity</span>
@@ -65,10 +65,10 @@ export default function Dashboard() {
             </div>
             <Link href="/inbox" className="text-xs text-primary hover:underline">Open inbox →</Link>
           </div>
-          <ul className="divide-y divide-border">
+          <ul className="space-y-1.5 p-2">
             {conversations.slice(0, 5).map((c) => (
-              <li key={c.id} className="flex items-center gap-3 px-5 py-3 hover:bg-muted/40 transition">
-                <span className={`grid h-8 w-8 place-items-center rounded-lg text-white text-[11px] ${c.channel === "whatsapp" ? "bg-whatsapp" : "bg-voice"}`}>
+              <li key={c.id} className="flex items-center gap-3 rounded-2xl px-3 py-3 hover:bg-muted/70 transition">
+                <span className={`grid h-9 w-9 place-items-center rounded-full text-white text-[11px] ${c.channel === "whatsapp" ? "bg-whatsapp" : "bg-voice"}`}>
                   {c.channel === "whatsapp" ? "W" : <PhoneCall className="h-3.5 w-3.5" />}
                 </span>
                 <div className="min-w-0 flex-1">
@@ -87,16 +87,16 @@ export default function Dashboard() {
         {/* Sidebar */}
         <div className="space-y-4">
           {/* Escalations */}
-          <div className="rounded-xl border border-border bg-card">
+          <div className="overflow-hidden rounded-3xl border border-border bg-card shadow-sm">
             <div className="flex items-center justify-between border-b border-border px-5 py-3">
               <div className="text-sm font-semibold flex items-center gap-1.5">
                 <AlertTriangle className="h-3.5 w-3.5 text-warning" /> Escalations
               </div>
               <span className="rounded-full bg-warning/10 text-warning text-xs font-semibold px-2 py-0.5">3 pending</span>
             </div>
-            <ul className="divide-y divide-border">
+            <ul className="space-y-1.5 p-2">
               {conversations.filter((c) => !c.ai).map((c) => (
-                <li key={c.id} className="px-5 py-3">
+                <li key={c.id} className="rounded-2xl px-3 py-3 hover:bg-muted/60 transition-colors">
                   <div className="text-sm font-medium">{c.customer}</div>
                   <div className="text-xs text-muted-foreground truncate">{c.preview}</div>
                   <div className="mt-2 flex gap-2">
@@ -109,7 +109,7 @@ export default function Dashboard() {
           </div>
 
           {/* Agent health */}
-          <div className="rounded-xl border border-border bg-card p-5">
+          <div className="rounded-3xl border border-border bg-card p-5 shadow-sm">
             <div className="text-sm font-semibold flex items-center gap-1.5">
               <Bot className="h-4 w-4 text-primary" /> Agent health
             </div>
@@ -122,7 +122,7 @@ export default function Dashboard() {
           </div>
 
           {/* Copilot suggestion */}
-          <div className="rounded-xl border border-primary/30 bg-primary/5 p-5">
+          <div className="rounded-3xl border border-primary/30 bg-primary/5 p-5 shadow-sm">
             <div className="flex items-center gap-2 text-xs uppercase tracking-widest text-primary font-semibold">
               <TrendingUp className="h-3.5 w-3.5" /> Copilot suggestion
             </div>
@@ -139,10 +139,10 @@ export default function Dashboard() {
 
 function Kpi({ label, value, delta, icon, tone }: { label: string; value: string; delta: string; icon: React.ReactNode; tone?: "warning" }) {
   return (
-    <div className="rounded-xl border border-border bg-card p-4">
+    <div className="rounded-3xl border border-border bg-card p-4 shadow-sm">
       <div className="flex items-center justify-between">
         <div className="text-xs text-muted-foreground">{label}</div>
-        <div className="text-muted-foreground [&>svg]:h-3.5 [&>svg]:w-3.5">{icon}</div>
+        <div className="grid h-8 w-8 place-items-center rounded-full bg-muted text-muted-foreground [&>svg]:h-3.5 [&>svg]:w-3.5">{icon}</div>
       </div>
       <div className="mt-2 font-mono text-2xl font-bold tabular-nums">{value}</div>
       <div className={`mt-0.5 text-xs ${tone === "warning" ? "text-warning" : "text-success"}`}>{delta}</div>

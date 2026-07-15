@@ -6,7 +6,7 @@ export function MarketingFooter() {
       <div className="mx-auto max-w-6xl px-4 sm:px-6 py-10 sm:py-16 grid grid-cols-2 md:grid-cols-5 gap-6 sm:gap-8 md:gap-10 text-sm">
         <div className="col-span-2">
           <div className="flex items-center gap-2 font-bold tracking-tight">
-            <span className="grid h-7 w-7 place-items-center rounded-[8px] bg-primary text-primary-foreground font-mono text-sm">⌘</span>
+            <span className="grid h-8 w-8 place-items-center rounded-full bg-primary text-primary-foreground font-mono text-sm">⌘</span>
             Ringly
           </div>
           <p className="mt-3 max-w-xs text-muted-foreground text-sm">AI agents that sell and book for small businesses. Live on WhatsApp and voice in minutes.</p>
