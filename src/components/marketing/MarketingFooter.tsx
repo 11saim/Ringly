@@ -1,48 +1,66 @@
 import Link from "next/link";
+import { MessageSquareText } from "lucide-react";
+
+const footerLinks = {
+  Product: [
+    { label: "Features", href: "#capabilities" },
+    { label: "Pricing", href: "#pricing" },
+    { label: "How It Works", href: "#solution" },
+  ],
+  Resources: [
+    { label: "Documentation", href: "#" },
+    { label: "API Reference", href: "#" },
+    { label: "Guides", href: "#" },
+  ],
+  Company: [
+    { label: "About", href: "/about" },
+    { label: "Blog", href: "#" },
+    { label: "Privacy Policy", href: "#" },
+  ],
+};
 
 export function MarketingFooter() {
   return (
-    <footer className="border-t border-border bg-white">
-      <div className="mx-auto max-w-6xl px-4 sm:px-6 py-10 sm:py-16 grid grid-cols-2 md:grid-cols-5 gap-6 sm:gap-8 md:gap-10 text-sm">
-        <div className="col-span-2">
-          <div className="flex items-center gap-2 font-bold tracking-tight">
-            <span className="grid h-8 w-8 place-items-center rounded-full bg-primary text-primary-foreground font-mono text-sm">⌘</span>
-            Ringly
+    <footer className="relative border-t border-black/[0.08] bg-white" role="contentinfo">
+      <div className="mx-auto max-w-6xl px-5 sm:px-6 py-14 sm:py-16">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-10 sm:gap-12">
+          <div className="col-span-2">
+            <Link href="/" className="flex items-center gap-2 text-zinc-900 font-semibold text-xl mb-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-lg" aria-label="Ringly - Home">
+              <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-zinc-900 text-white" aria-hidden="true">
+                <MessageSquareText className="h-5 w-5" />
+              </div>
+              Ringly
+            </Link>
+            <p className="text-zinc-500 text-sm max-w-xs leading-relaxed">
+              Turn your existing WhatsApp number into an autonomous AI agent. No new apps, no friction.
+            </p>
           </div>
-          <p className="mt-3 max-w-xs text-muted-foreground text-sm">AI agents that sell and book for small businesses. Live on WhatsApp and voice in minutes.</p>
+
+          {Object.entries(footerLinks).map(([category, links]) => (
+            <div key={category}>
+              <h3 className="text-zinc-900 font-semibold mb-4 text-sm">{category}</h3>
+              <ul className="space-y-3 text-sm text-zinc-500" role="list">
+                {links.map((link) => (
+                  <li key={link.label}>
+                    <Link
+                      href={link.href}
+                      className="hover:text-zinc-900 transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded"
+                    >
+                      {link.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
         </div>
-        <div>
-          <div className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Product</div>
-          <ul className="space-y-2">
-            <li><Link href="/" className="hover:text-primary">Overview</Link></li>
-            <li><Link href="/pricing" className="hover:text-primary">Pricing</Link></li>
-            <li><Link href="/" className="hover:text-primary">Integrations</Link></li>
-          </ul>
-        </div>
-        <div>
-          <div className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Resources</div>
-          <ul className="space-y-2">
-            <li><Link href="/" className="hover:text-primary">Docs</Link></li>
-            <li><Link href="/" className="hover:text-primary">Changelog</Link></li>
-            <li><Link href="/" className="hover:text-primary">Guides</Link></li>
-          </ul>
-        </div>
-        <div>
-          <div className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Company</div>
-          <ul className="space-y-2">
-            <li><Link href="/about" className="hover:text-primary">About</Link></li>
-            <li><Link href="/contact" className="hover:text-primary">Contact</Link></li>
-            <li><Link href="/" className="hover:text-primary">Careers</Link></li>
-          </ul>
-        </div>
-      </div>
-      <div className="border-t border-border">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6 py-4 sm:py-6 flex flex-col sm:flex-row items-center justify-between text-xs text-muted-foreground gap-3">
-          <div>&copy; {new Date().getFullYear()} Ringly, Inc.</div>
-          <div className="flex gap-5">
-            <Link href="/">Privacy</Link>
-            <Link href="/">Terms</Link>
-            <Link href="/">Security</Link>
+
+        <div className="mt-14 pt-8 border-t border-black/[0.08] flex flex-col md:flex-row justify-between items-center gap-4">
+          <p className="text-xs text-zinc-400">&copy; {new Date().getFullYear()} Ringly. All rights reserved.</p>
+          <div className="flex items-center gap-4 text-xs text-zinc-400">
+            <span>Powered by Meta Cloud API</span>
+            <span aria-hidden="true">&middot;</span>
+            <span>Built with LangGraph</span>
           </div>
         </div>
       </div>
