@@ -1,178 +1,237 @@
 "use client";
 
+import { useEffect, useRef, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useEffect, useState, useCallback, useRef } from "react";
-import { CheckCircle2 } from "lucide-react";
 
-interface Message {
-  id: number;
-  side: "left" | "right";
-  content: string;
-  timestamp: string;
-  isAction?: boolean;
+type Sender = "user" | "agent";
+
+interface ChatMessage {
+  id: string;
+  from: Sender;
+  text: string;
+  time: string;
 }
 
-const MESSAGES: Omit<Message, "id">[] = [
-  {
-    side: "left",
-    content: "Hi, do you have an appointment for a haircut today at 5pm?",
-    timestamp: "5:02 PM",
-  },
-  {
-    side: "right",
-    content: "Let me check... Yes! We have Sarah available at 5:00 PM today. Shall I book it for you?",
-    timestamp: "5:02 PM",
-  },
-  {
-    side: "left",
-    content: "Yes please.",
-    timestamp: "5:03 PM",
-  },
-  {
-    side: "right",
-    content: "✅ Booking Confirmed\nAppointment with Sarah at 5:00 PM today.\nA confirmation has been sent.",
-    timestamp: "5:03 PM",
-    isAction: true,
-  },
-  {
-    side: "left",
-    content: "Thank you!",
-    timestamp: "5:03 PM",
-  },
-  {
-    side: "right",
-    content: "You're welcome! We'll send you a reminder an hour before your appointment. See you at 5!",
-    timestamp: "5:03 PM",
-  },
+const SCRIPT: ChatMessage[] = [
+  { id: "m1", from: "user", text: "Hi, I'd like to book a haircut for tomorrow.", time: "10:14 AM" },
+
+  { id: "m2", from: "agent", text: "Sure! I'd be happy to help.", time: "10:14 AM" },
+  { id: "m3", from: "agent", text: "We have slots available at 11:00 AM, 2:30 PM and 5:00 PM. Which works best for you?", time: "10:14 AM" },
+
+  { id: "m4", from: "user", text: "2:30 PM please.", time: "10:15 AM" },
+
+  { id: "m5", from: "agent", text: "Perfect! May I have your name for the booking?", time: "10:15 AM" },
+
+  { id: "m6", from: "user", text: "Ali Khan", time: "10:15 AM" },
+
+  { id: "m7", from: "agent", text: "Thanks, Ali!", time: "10:15 AM" },
+  { id: "m8", from: "agent", text: "Your haircut has been booked for tomorrow at 2:30 PM.", time: "10:15 AM" },
+
+  { id: "m9", from: "user", text: "How much does it cost?", time: "10:16 AM" },
+
+  { id: "m10", from: "agent", text: "A standard haircut is Rs. 1,500.", time: "10:16 AM" },
+  { id: "m11", from: "agent", text: "You'll receive a WhatsApp reminder 2 hours before your appointment.", time: "10:16 AM" },
+
+  { id: "m12", from: "user", text: "Awesome, thank you!", time: "10:17 AM" },
+
+  { id: "m13", from: "agent", text: "You're welcome! We look forward to seeing you tomorrow 😊", time: "10:17 AM" },
 ];
 
-function TypingIndicator() {
+const TYPING_DELAY = 800;
+const READ_DELAY = 1200;
+const LOOP_PAUSE = 3000;
+
+function TypingBubble({ side }: { side: Sender }) {
+  const isUser = side === "user";
   return (
-    <div className="flex items-center gap-1 px-1 py-2">
-      {[0, 1, 2].map((i) => (
-        <motion.div
-          key={i}
-          className="w-[5px] h-[5px] rounded-full bg-white/50"
-          animate={{ opacity: [0.3, 1, 0.3], scale: [0.8, 1, 0.8] }}
-          transition={{
-            duration: 1,
-            repeat: Infinity,
-            delay: i * 0.2,
-            ease: "easeInOut",
-          }}
-        />
-      ))}
+    <div className={`flex ${isUser ? "justify-end" : "justify-start"} mt-2`}>
+      <div
+        className="flex items-center gap-[2px] px-2 py-2 rounded-[7px]"
+        style={{
+          background: isUser ? "#005C4B" : "#202C33",
+          borderTopLeftRadius: isUser ? 8 : 2,
+          borderTopRightRadius: isUser ? 2 : 8,
+        }}
+      >
+        {[0, 1, 2].map((i) => (
+          <motion.span
+            key={i}
+            className="w-[4px] h-[4px] rounded-full"
+            style={{ background: isUser ? "#8FC9AE" : "#8696A0" }}
+            animate={{ opacity: [0.3, 1, 0.3], y: [0, -3, 0] }}
+            transition={{ duration: 0.9, repeat: Infinity, delay: i * 0.15 }}
+          />
+        ))}
+      </div>
     </div>
   );
 }
 
-function ChatBubble({ message }: { message: Message }) {
-  const isRight = message.side === "right";
+function CheckMarks() {
+  return (
+    <svg width="14" height="9" viewBox="0 0 16 11" fill="none" className="shrink-0">
+      <path d="M1 5.5L4.5 9L11 1.5" stroke="#53BDEB" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M5.5 5.5L9 9L15.5 1.5" stroke="#53BDEB" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function BubbleTail({ side }: { side: "left" | "right" }) {
+  if (side === "right") {
+    return (
+      <svg
+        className="absolute -right-[7px] top-0"
+        width="8"
+        height="13"
+        viewBox="0 0 8 13"
+        aria-hidden="true"
+      >
+        <path
+          d="M0 0 H8 L4.5 4.5 C3.4 5.8 2.8 7.2 2.5 8.9 C2.2 10.5 1.4 11.8 0 13 V0Z"
+          fill="#005C4B"
+        />
+      </svg>
+    );
+  }
 
   return (
+    <svg
+      className="absolute -left-[7px] top-0"
+      width="8"
+      height="13"
+      viewBox="0 0 8 13"
+      aria-hidden="true"
+    >
+      <path
+        d="M8 0 H0 L3.5 4.5 C4.6 5.8 5.2 7.2 5.5 8.9 C5.8 10.5 6.6 11.8 8 13 V0Z"
+        fill="#202C33"
+      />
+    </svg>
+  );
+}
+
+function Bubble({ msg, isFirstInGroup }: { msg: ChatMessage; isFirstInGroup: boolean }) {
+  const isUser = msg.from === "user";
+  return (
     <motion.div
-      initial={{ opacity: 0, y: 8, scale: 0.96 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-      className={`flex ${isRight ? "justify-end" : "justify-start"}`}
+      layout
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.2, ease: "easeOut" }}
+      className={`flex ${isUser ? "justify-end" : "justify-start"} ${isFirstInGroup ? "mt-2" : "mt-[2px]"}`}
     >
       <div
-        className={`max-w-[85%] px-3 py-2 text-[12.5px] leading-[16px] rounded-2xl whitespace-pre-line ${
-          isRight
-            ? "bg-[#005C4B] text-[#E9EDEF] rounded-br-md"
-            : "bg-[#202C33] text-[#E9EDEF] rounded-bl-md"
-        }`}
+        className="relative max-w-[82%] px-3 pt-2 pb-1.5"
+        style={{
+          background: isUser ? "#005C4B" : "#202C33",
+          borderTopLeftRadius: isUser ? 8 : isFirstInGroup ? 2 : 8,
+          borderTopRightRadius: isUser ? (isFirstInGroup ? 2 : 8) : 8,
+          borderBottomLeftRadius: 8,
+          borderBottomRightRadius: 8,
+        }}
       >
-        {message.isAction ? (
-          <div className="flex items-start gap-2">
-            <CheckCircle2 className="h-4 w-4 text-emerald-300 shrink-0 mt-0.5" />
-            <span>{message.content}</span>
-          </div>
-        ) : (
-          <span>{message.content}</span>
-        )}
-        <span className="block text-right mt-1">
-          <span className="text-[10px] text-white/50">{message.timestamp}</span>
-          {isRight && (
-            <svg width="16" height="11" viewBox="0 0 16 11" fill="none" className="inline-block ml-1">
-              <path d="M11.071 0.653L5.071 6.653L3.071 4.653" stroke="#53BDEB" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-              <path d="M14.071 0.653L8.071 6.653L7.071 5.653" stroke="#53BDEB" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          )}
-        </span>
+        {isFirstInGroup && <BubbleTail side={isUser ? "right" : "left"} />}
+
+        <p
+          className="text-white text-[10.5px] leading-[15px]"
+          style={{ wordBreak: "break-word" }}
+        >
+          {msg.text}
+        </p>
+
+        <div className="flex justify-end items-center gap-1">
+          <span
+            className="text-[9px]"
+            style={{ color: isUser ? "#8FC9AE" : "#8696A0" }}
+          >
+            {msg.time}
+          </span>
+          {isUser && <CheckMarks />}
+        </div>
       </div>
     </motion.div>
   );
 }
 
 export function ChatSimulation() {
-  const [visibleMessages, setVisibleMessages] = useState<Message[]>([]);
-  const [showTyping, setShowTyping] = useState(false);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [visible, setVisible] = useState<ChatMessage[]>([]);
+  const [typingFor, setTypingFor] = useState<Sender | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const timeouts = useRef<ReturnType<typeof setTimeout>[]>([]);
 
-  const addNextMessage = useCallback(() => {
-    if (currentIndex >= MESSAGES.length) return;
-
-    const nextMsg = MESSAGES[currentIndex];
-    const isFromAI = nextMsg.side === "right";
-
-    if (isFromAI && currentIndex > 0) {
-      setShowTyping(true);
-      timeoutRef.current = setTimeout(() => {
-        setShowTyping(false);
-        setVisibleMessages((prev) => [...prev, { ...nextMsg, id: currentIndex }]);
-        setCurrentIndex((prev) => prev + 1);
-      }, 800);
-    } else {
-      setVisibleMessages((prev) => [...prev, { ...nextMsg, id: currentIndex }]);
-      setCurrentIndex((prev) => prev + 1);
-    }
-  }, [currentIndex]);
+  const scrollToBottom = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    requestAnimationFrame(() => {
+      if (el.scrollHeight > el.clientHeight) {
+        el.scrollTop = el.scrollHeight;
+      }
+    });
+  }, []);
 
   useEffect(() => {
-    if (currentIndex === 0) {
-      timeoutRef.current = setTimeout(addNextMessage, 800);
-      return () => { if (timeoutRef.current) clearTimeout(timeoutRef.current); };
+    let cancelled = false;
+
+    function schedule(fn: () => void, delay: number) {
+      const t = setTimeout(() => {
+        if (!cancelled) fn();
+      }, delay);
+      timeouts.current.push(t);
     }
 
-    if (currentIndex >= MESSAGES.length) return;
+    function runLoop() {
+      setVisible([]);
+      setTypingFor(null);
+      let elapsed = 500;
 
-    const delay = currentIndex <= 2 ? 1600 : 2000;
-    timeoutRef.current = setTimeout(addNextMessage, delay);
-    return () => { if (timeoutRef.current) clearTimeout(timeoutRef.current); };
-  }, [currentIndex, addNextMessage]);
+      SCRIPT.forEach((msg, i) => {
+        elapsed += i === 0 ? 0 : TYPING_DELAY;
+        schedule(() => setTypingFor(msg.from), elapsed);
+        elapsed += TYPING_DELAY;
+        schedule(() => {
+          setTypingFor(null);
+          setVisible((prev) => [...prev, msg]);
+        }, elapsed);
+        elapsed += READ_DELAY;
+      });
+
+      schedule(runLoop, elapsed + LOOP_PAUSE);
+    }
+
+    runLoop();
+    return () => {
+      cancelled = true;
+      timeouts.current.forEach(clearTimeout);
+      timeouts.current = [];
+    };
+  }, []);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [visible, typingFor, scrollToBottom]);
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Date header */}
-      <div className="flex justify-center py-2">
-        <div className="bg-[#182229] text-[#8696A0] text-[11px] px-3 py-1 rounded-lg shadow-sm">
+    <div ref={scrollRef} className="h-full overflow-y-auto overflow-x-hidden px-[10px] py-[12px] flex flex-col scrollbar-none">
+      {/* TODAY header */}
+      <div className="flex justify-center mb-2">
+        <div
+          className="text-[#8696A0] text-[9px] px-2 py-0.5 rounded-md"
+          style={{ background: "#182229" }}
+        >
           TODAY
         </div>
       </div>
 
-      {/* Chat messages area */}
-      <div className="flex-1 px-3 pb-3 space-y-[6px] overflow-hidden">
-        <AnimatePresence mode="sync">
-          {visibleMessages.map((msg) => (
-            <ChatBubble key={msg.id} message={msg} />
-          ))}
-        </AnimatePresence>
-
-        {showTyping && (
-          <motion.div
-            initial={{ opacity: 0, y: 5 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
-            className="flex justify-start"
-          >
-            <div className="bg-[#202C33] rounded-2xl rounded-bl-md px-3 py-1">
-              <TypingIndicator />
-            </div>
-          </motion.div>
-        )}
-      </div>
+      <AnimatePresence initial={false}>
+        {visible.map((msg, i) => {
+          const prevMsg = i > 0 ? visible[i - 1] : null;
+          const isFirstInGroup = !prevMsg || prevMsg.from !== msg.from;
+          return (
+            <Bubble key={msg.id} msg={msg} isFirstInGroup={isFirstInGroup} />
+          );
+        })}
+        {typingFor && <TypingBubble key="typing" side={typingFor} />}
+      </AnimatePresence>
     </div>
   );
 }

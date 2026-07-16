@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { motion, useScroll, AnimatePresence } from "framer-motion";
+import { motion, useScroll, useTransform, useMotionValueEvent, useSpring, AnimatePresence } from "framer-motion";
 import { MessageSquareText, Menu, X } from "lucide-react";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 
 const navLinks = [
   { label: "How It Works", href: "#solution" },
@@ -13,91 +13,112 @@ const navLinks = [
 ];
 
 export function MarketingHeader() {
-  const [isScrolled, setIsScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
   const { scrollY } = useScroll();
 
-  useEffect(() => {
-    return scrollY.on("change", (latest) => {
-      setIsScrolled(latest > 50);
-    });
-  }, [scrollY]);
+  const rawTop = useTransform(scrollY, [0, 100], [16, 0]);
+  const rawPaddingX = useTransform(scrollY, [0, 100], [16, 0]);
+  const rawBorderRadius = useTransform(scrollY, [0, 100], [9999, 20]);
+  const rawBorderOpacity = useTransform(scrollY, [40, 100], [0, 1]);
+
+  const springConfig = { stiffness: 120, damping: 25, mass: 0.8 };
+  const top = useSpring(rawTop, springConfig);
+  const paddingX = useSpring(rawPaddingX, springConfig);
+  const borderRadius = useSpring(rawBorderRadius, springConfig);
+  const borderOpacity = useSpring(rawBorderOpacity, { stiffness: 100, damping: 20 });
+
+  useMotionValueEvent(scrollY, "change", (latest) => {
+    setIsScrolled(latest > 60);
+  });
 
   const closeMobile = useCallback(() => setMobileOpen(false), []);
-
-  useEffect(() => {
-    if (mobileOpen) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
-    return () => { document.body.style.overflow = ""; };
-  }, [mobileOpen]);
 
   return (
     <>
       <motion.header
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-        className="fixed top-4 left-0 right-0 z-50 px-4"
+        transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+        style={{
+          top,
+          paddingLeft: paddingX,
+          paddingRight: paddingX,
+        }}
+        className="fixed left-0 right-0 z-50"
         role="banner"
       >
-        <div
-          className={`mx-auto max-w-6xl flex items-center justify-between rounded-full border border-black/[0.06] p-3 pl-5 sm:pl-6 transition-all duration-300 ${
-            isScrolled
-              ? "bg-white/80 backdrop-blur-xl shadow-[0_8px_30px_rgb(0,0,0,0.06)]"
-              : "bg-white/50 backdrop-blur-sm shadow-none"
-          }`}
+        <motion.div
+          style={{
+            borderRadius,
+          }}
+          className="mx-auto max-w-6xl flex items-center justify-between p-3 pl-5 sm:pl-6 transition-colors duration-500"
         >
-          <Link href="/" className="flex items-center gap-2.5 text-[#0F172A] font-semibold text-lg tracking-tight focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 rounded-full px-1" aria-label="Ringly - Home">
-            <div className="flex items-center justify-center w-8 h-8 rounded-xl bg-[#0F172A] text-white" aria-hidden="true">
-              <MessageSquareText className="h-[18px] w-[18px]" />
-            </div>
-            Ringly
-          </Link>
+          {/* Background layer */}
+          <motion.div
+            className="absolute inset-0 rounded-[inherit] transition-all duration-500"
+            style={{
+              opacity: borderOpacity,
+            }}
+          >
+            <div className={`w-full h-full rounded-[inherit] backdrop-blur-xl border border-black/[0.08] ${
+              isScrolled
+                ? "bg-white/90 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.08),0_8px_32px_-8px_rgba(0,0,0,0.04)]"
+                : "bg-white/60 shadow-[0_2px_12px_-2px_rgba(0,0,0,0.04)]"
+            }`} />
+          </motion.div>
 
-          {/* Desktop nav */}
-          <nav className="hidden md:flex items-center gap-1" aria-label="Main navigation">
-            {navLinks.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className="px-3 py-2 text-sm font-medium text-slate-500 hover:text-[#0F172A] rounded-lg hover:bg-slate-50 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
-              >
-                {link.label}
-              </Link>
-            ))}
-          </nav>
-
-          <div className="flex items-center gap-2">
-            <Link
-              href="/login"
-              className="hidden sm:block text-sm font-medium text-slate-500 hover:text-[#0F172A] px-4 py-2 rounded-lg hover:bg-slate-50 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
-            >
-              Sign in
+          {/* Content */}
+          <div className="relative flex items-center justify-between w-full">
+            <Link href="/" className="flex items-center gap-2.5 text-[#0F172A] font-semibold text-lg tracking-tight focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 rounded-full px-1" aria-label="Ringly - Home">
+              <div className="flex items-center justify-center w-8 h-8 rounded-xl bg-[#0F172A] text-white" aria-hidden="true">
+                <MessageSquareText className="h-[18px] w-[18px]" />
+              </div>
+              Ringly
             </Link>
-            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="hidden sm:block">
-              <Link
-                href="/signup"
-                className="text-sm font-semibold px-5 py-2.5 rounded-full bg-[#0F172A] text-white hover:bg-[#1E293B] transition-all duration-200 flex items-center gap-2 shadow-[0_2px_8px_rgb(0,0,0,0.12)] hover:shadow-[0_4px_16px_rgb(0,0,0,0.16)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
-              >
-                Get Started
-              </Link>
-            </motion.div>
 
-            {/* Mobile hamburger */}
-            <button
-              onClick={() => setMobileOpen(!mobileOpen)}
-              className="md:hidden p-2 rounded-xl hover:bg-slate-100 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
-              aria-label={mobileOpen ? "Close menu" : "Open menu"}
-              aria-expanded={mobileOpen}
-              aria-controls="mobile-menu"
-            >
-              {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-            </button>
+            {/* Desktop nav */}
+            <nav className="hidden md:flex items-center gap-1" aria-label="Main navigation">
+              {navLinks.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className="px-3 py-2 text-sm font-medium text-slate-500 hover:text-[#0F172A] rounded-lg hover:bg-black/[0.03] transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                >
+                  {link.label}
+                </Link>
+              ))}
+            </nav>
+
+            <div className="flex items-center gap-2">
+              <Link
+                href="/login"
+                className="hidden sm:block text-sm font-medium text-slate-500 hover:text-[#0F172A] px-4 py-2 rounded-lg hover:bg-black/[0.03] transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+              >
+                Sign in
+              </Link>
+              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="hidden sm:block">
+                <Link
+                  href="/signup"
+                  className="text-sm font-semibold px-5 py-2.5 rounded-full bg-[#0F172A] text-white hover:bg-[#1E293B] transition-all duration-200 flex items-center gap-2 shadow-[0_2px_8px_rgb(0,0,0,0.12)] hover:shadow-[0_4px_16px_rgb(0,0,0,0.16)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
+                >
+                  Get Started
+                </Link>
+              </motion.div>
+
+              {/* Mobile hamburger */}
+              <button
+                onClick={() => setMobileOpen(!mobileOpen)}
+                className="md:hidden p-2 rounded-xl hover:bg-black/[0.03] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                aria-label={mobileOpen ? "Close menu" : "Open menu"}
+                aria-expanded={mobileOpen}
+                aria-controls="mobile-menu"
+              >
+                {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              </button>
+            </div>
           </div>
-        </div>
+        </motion.div>
       </motion.header>
 
       {/* Mobile menu overlay */}
@@ -116,11 +137,11 @@ export function MarketingHeader() {
           >
             <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" onClick={closeMobile} />
             <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.2 }}
-              className="absolute top-20 left-4 right-4 bg-white rounded-2xl border border-black/[0.06] shadow-[0_20px_60px_rgb(0,0,0,0.12)] p-4"
+              initial={{ opacity: 0, y: -10, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -10, scale: 0.98 }}
+              transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+              className="absolute top-20 left-4 right-4 bg-white/95 backdrop-blur-xl rounded-2xl border border-black/[0.06] shadow-[0_20px_60px_rgb(0,0,0,0.12)] p-4"
             >
               <nav className="flex flex-col gap-1" aria-label="Mobile navigation">
                 {navLinks.map((link) => (

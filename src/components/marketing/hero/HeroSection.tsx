@@ -51,8 +51,8 @@ export function HeroSection() {
     >
       <BackgroundEffects />
 
-      <div className="relative w-full mx-auto max-w-7xl px-5 sm:px-6 pt-28 pb-16 sm:pt-32 sm:pb-20 lg:pt-40 lg:pb-28">
-        <div className="grid lg:grid-cols-[1fr_480px] gap-10 lg:gap-16 items-center">
+      <div className="relative w-full mx-auto max-w-7xl px-5 sm:px-6 pt-20 pb-12 sm:pt-24 sm:pb-16 lg:pt-25 lg:pb-28">
+        <div className="grid lg:grid-cols-[1fr_380px] gap-10 lg:gap-12 items-center">
           {/* Left: Copy */}
           <motion.div
             initial="hidden"
@@ -61,17 +61,6 @@ export function HeroSection() {
             style={{ y: textY }}
             className="flex flex-col gap-6 sm:gap-7 max-w-2xl"
           >
-            {/* Announcement badge */}
-            <motion.div
-              variants={itemVariants}
-              className="inline-flex items-center gap-2.5 self-start px-4 py-2 rounded-full border border-black/[0.06] bg-white/70 backdrop-blur-sm shadow-[0_2px_8px_rgb(0,0,0,0.04)] text-xs font-medium text-slate-600"
-            >
-              <span className="relative flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75 animate-ping" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
-              </span>
-              Now serving 500+ businesses across Pakistan
-            </motion.div>
 
             {/* Headline */}
             <motion.h1
@@ -156,7 +145,7 @@ export function HeroSection() {
               iconBg="bg-indigo-50"
               label="Language Detected"
               value="Urdu + English"
-              className="-left-8 top-8"
+              className="-left-10 top-[10%]"
               delay={1.5}
               duration={4.5}
               yOffset={8}
@@ -168,7 +157,7 @@ export function HeroSection() {
               iconBg="bg-emerald-50"
               label="Tool Executed"
               value="create_booking()"
-              className="-right-6 bottom-32"
+              className="-right-8 bottom-[25%]"
               delay={2}
               duration={5}
               yOffset={10}
@@ -180,7 +169,7 @@ export function HeroSection() {
               iconBg="bg-amber-50"
               label="Human Escalation"
               value="Ready if needed"
-              className="-left-4 bottom-12"
+              className="-left-6 bottom-[8%]"
               delay={2.5}
               duration={4}
               yOffset={6}
@@ -191,9 +180,6 @@ export function HeroSection() {
           </motion.div>
         </div>
       </div>
-
-      {/* Bottom gradient fade */}
-      <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[#FAFAFA] to-transparent pointer-events-none" aria-hidden="true" />
     </section>
   );
-}
+} 
