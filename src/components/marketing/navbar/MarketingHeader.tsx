@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import Link from "next/link";
 import { MessageSquareText } from "lucide-react";
+import { FlowButton } from "@/components/ui/flow-button";
 
 const navLinks = [
   { label: "How It Works", href: "#solution" },
@@ -105,18 +106,15 @@ export function MarketingHeader() {
 
           {/* Desktop CTAs */}
           <div className="hidden md:flex items-center gap-1.5 shrink-0">
-            <Link
-              href="/login"
-              className="px-4 py-2 text-[13px] font-medium bg-[#c0f4de] text-[#475569] hover:text-[#0F172A] rounded-full hover:bg-slate-50 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6366F1]"
-            >
-              Sign in
-            </Link>
-            <Link
-              href="/signup"
-              className="px-5 py-2 text-[13px] font-semibold rounded-full bg-[#0F172A] text-white hover:bg-[#1E293B] transition-all duration-200 shadow-[0_1px_4px_rgba(0,0,0,0.12)] hover:shadow-[0_2px_8px_rgba(0,0,0,0.18)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6366F1] focus-visible:ring-offset-2"
-            >
-              Get Started
-            </Link>
+            <div className="moving-border-wrapper">
+              <Link
+                href="/login"
+                className="see-action-hover moving-border-inner px-4 py-2 text-[13px] font-medium text-[#0F172A] bg-white rounded-full border border-black/[0.08] overflow-hidden transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6366F1]"
+              >
+                Sign in
+              </Link>
+            </div>
+            <FlowButton text="Get Started" href="/signup" />
           </div>
 
           {/* Mobile: Hamburger */}
@@ -175,7 +173,7 @@ export function MarketingHeader() {
                 <Link
                   href="/login"
                   onClick={closeMobile}
-                  className="block px-4 py-3 rounded-full bg-[#c0f4de] text-[#0F172A] text-[15px] font-semibold text-center hover:bg-[#1E293B] transition-colors shadow-[0_2px_8px_rgba(0,0,0,0.12)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6366F1] focus-visible:ring-offset-2 animate-dropdown-link mb-3"
+                  className="block px-4 py-3 rounded-full bg-[#c0f4de] text-[#0F172A] text-[15px] font-semibold text-center hover:bg-[#a8e6c8] transition-colors shadow-[0_2px_8px_rgba(0,0,0,0.12)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6366F1] focus-visible:ring-offset-2 animate-dropdown-link mb-3"
                   style={{ animationDelay: `${navLinks.length * 40}ms` }}
                 >
                   Sign In

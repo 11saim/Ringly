@@ -8,7 +8,8 @@ import {
 } from "lucide-react";
 import { BackgroundEffects } from "./BackgroundEffects";
 import { PhoneMockup } from "./PhoneMockup";
-import { MagneticButton } from "../MagneticButton";
+import { FlowButton } from "@/components/ui/flow-button";
+import Link from "next/link";
 
 
 export function HeroSection() {
@@ -63,21 +64,17 @@ export function HeroSection() {
             <div
               className="flex flex-col sm:flex-row gap-3 mt-1"
             >
-              <MagneticButton
-                href="/signup"
-                className="group inline-flex items-center justify-center gap-2.5 px-7 py-3.5 bg-[#0F172A] text-white rounded-full font-semibold text-[15px] hover:bg-[#1E293B] transition-all duration-200 shadow-[0_4px_12px_rgb(0,0,0,0.15)] hover:shadow-[0_8px_24px_rgb(0,0,0,0.2)]"
-              >
-                Start Free Trial
-                <ArrowRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform duration-200" />
-              </MagneticButton>
+              <FlowButton text="Get Started Free" href="/signup" />
 
-              <MagneticButton
-                href="#demo"
-                className="group inline-flex items-center justify-center gap-2.5 px-7 py-3.5 bg-white border border-black/[0.08] text-[#0F172A] rounded-full font-semibold text-[15px] hover:bg-slate-50 hover:border-black/[0.12] transition-all duration-200 shadow-[0_2px_6px_rgb(0,0,0,0.04)]"
-              >
-                <Zap className="h-4 w-4 text-emerald-500 fill-emerald-500/20" />
-                Book a Demo
-              </MagneticButton>
+              <div className="moving-border-wrapper">
+                <Link
+                  href="/login"
+                  className="see-action-hover group inline-flex items-center justify-center gap-2.5 px-7 py-3.5 bg-white text-[#0F172A] rounded-full font-semibold text-[15px] transition-all duration-300 shadow-[0_2px_6px_rgb(0,0,0,0.04)] hover:shadow-[0_4px_16px_rgba(34,197,94,0.12)]"
+                >
+                  <Zap className="h-4 w-4 text-emerald-500 fill-emerald-500/20 group-hover:fill-emerald-500/40 transition-all duration-300" />
+                  See It In Action
+                </Link>
+              </div>
             </div>
 
             {/* Trust signals */}

@@ -269,3 +269,47 @@
 }
 
 @utility animate-backdrop-in { animation: backdrop-in 0.2s ease-out both; }
+
+@property --border-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes spin-border {
+  to { --border-angle: 360deg; }
+}
+
+.moving-border-wrapper {
+  position: relative;
+  padding: 2px;
+  border-radius: 9999px;
+  background: conic-gradient(from var(--border-angle), transparent 40%, #22C55E 55%, #10B981 65%, transparent 80%);
+  animation: spin-border 2.5s linear infinite;
+}
+
+.moving-border-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: #0F172A;
+}
+
+.see-action-hover {
+  position: relative;
+  overflow: hidden;
+}
+
+.see-action-hover::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(34,197,94,0.1), rgba(16,185,129,0.15), rgba(99,102,241,0.1));
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.see-action-hover:hover::before {
+  opacity: 1;
+}
