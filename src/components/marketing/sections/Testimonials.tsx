@@ -1,6 +1,5 @@
 "use client";
 
-import { motion } from "framer-motion";
 import { Star, Quote } from "lucide-react";
 
 const testimonials = [
@@ -42,25 +41,12 @@ const testimonials = [
   },
 ];
 
-const containerVariants = {
-  hidden: { opacity: 0 },
-  show: { opacity: 1, transition: { staggerChildren: 0.1 } },
-};
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 24, scale: 0.97 },
-  show: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] } },
-};
 
 export function Testimonials() {
   return (
     <section className="relative py-24 sm:py-28 px-5 sm:px-6" aria-labelledby="testimonials-heading">
       <div className="mx-auto max-w-6xl">
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, amount: 0.3 }}
-          transition={{ duration: 0.5 }}
+        <div
           className="text-center mb-14 sm:mb-16"
         >
           <h2 id="testimonials-heading" className="text-3xl sm:text-4xl md:text-5xl font-bold text-[#0F172A] tracking-tight mb-4 leading-[1.15]">
@@ -69,20 +55,14 @@ export function Testimonials() {
           <p className="text-base sm:text-lg text-slate-500 max-w-2xl mx-auto">
             Real results from real businesses using Ringly every day.
           </p>
-        </motion.div>
+        </div>
 
-        <motion.div
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true, amount: 0.2 }}
-          variants={containerVariants}
+        <div
           className="grid md:grid-cols-3 gap-5 sm:gap-6"
         >
           {testimonials.map((t) => (
-            <motion.article
+            <article
               key={t.name}
-              variants={itemVariants}
-              whileHover={{ y: -4 }}
               className="relative rounded-2xl border border-black/[0.06] bg-white p-6 sm:p-7 shadow-[0_2px_8px_rgb(0,0,0,0.03)] hover:shadow-[0_12px_32px_rgb(0,0,0,0.06)] transition-all duration-300"
             >
               {/* Quote icon */}
@@ -118,9 +98,9 @@ export function Testimonials() {
                 </div>
                 <span className="ml-auto text-[10px] font-semibold text-slate-400 uppercase tracking-wider">{t.type}</span>
               </div>
-            </motion.article>
+            </article>
           ))}
-        </motion.div>
+        </div>
       </div>
     </section>
   );

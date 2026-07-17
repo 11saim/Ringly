@@ -1,7 +1,35 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useInView } from "framer-motion";
+
+// Simple hook to detect if an element is in view using IntersectionObserver.
+function useInView(ref, options = { once: true, amount: 0.5 }) {
+  const [inView, setInView] = useState(false);
+
+  useEffect(() => {
+    const element = ref?.current;
+    if (!element) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setInView(true);
+          if (options.once) {
+            observer.disconnect();
+          }
+        }
+      },
+      {
+        threshold: options.amount ?? 0,
+      }
+    );
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [ref, options.once, options.amount]);
+
+  return inView;
+}
+
 
 interface AnimatedCounterProps {
   target: number;

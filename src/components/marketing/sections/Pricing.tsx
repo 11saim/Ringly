@@ -1,6 +1,5 @@
 "use client";
 
-import { motion } from "framer-motion";
 import { Check, ArrowRight } from "lucide-react";
 import { MagneticButton } from "../MagneticButton";
 
@@ -67,11 +66,7 @@ export function Pricing() {
   return (
     <section id="pricing" className="relative py-24 sm:py-28 px-5 sm:px-6" aria-labelledby="pricing-heading">
       <div className="mx-auto max-w-6xl">
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, amount: 0.3 }}
-          transition={{ duration: 0.5 }}
+        <div
           className="text-center mb-14 sm:mb-16"
         >
           <h2 id="pricing-heading" className="text-3xl sm:text-4xl md:text-5xl font-bold text-[#0F172A] tracking-tight mb-4 leading-[1.15]">
@@ -80,26 +75,19 @@ export function Pricing() {
           <p className="text-base sm:text-lg text-slate-500 max-w-2xl mx-auto">
             Start free. Pay only when you grow. No hidden fees, no per-seat charges.
           </p>
-        </motion.div>
+        </div>
 
-        <motion.div
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true, amount: 0.2 }}
-          variants={containerVariants}
+        <div
           className="grid md:grid-cols-3 gap-5 sm:gap-6 items-start"
           role="list"
         >
           {plans.map((plan) => (
-            <motion.div
+            <div
               key={plan.name}
-              variants={itemVariants}
-              whileHover={{ y: -4 }}
-              className={`relative rounded-2xl p-6 sm:p-7 transition-all duration-300 ${
-                plan.highlighted
+              className={`relative rounded-2xl p-6 sm:p-7 transition-all duration-300 ${plan.highlighted
                   ? "border-2 border-indigo-500 bg-white shadow-[0_20px_50px_-25px_rgba(99,102,241,0.3)]"
                   : "border border-black/[0.06] bg-white shadow-[0_2px_8px_rgb(0,0,0,0.03)] hover:shadow-[0_12px_32px_rgb(0,0,0,0.06)]"
-              }`}
+                }`}
               role="listitem"
             >
               {plan.highlighted && (
@@ -128,28 +116,23 @@ export function Pricing() {
 
               <MagneticButton
                 href={plan.highlighted ? "/signup" : plan.name === "Scale" ? "mailto:sales@ringly.ai" : "/signup"}
-                className={`group w-full flex items-center justify-center gap-2 px-5 py-3 rounded-full font-semibold text-sm transition-all duration-200 ${
-                  plan.highlighted
+                className={`group w-full flex items-center justify-center gap-2 px-5 py-3 rounded-full font-semibold text-sm transition-all duration-200 ${plan.highlighted
                     ? "bg-indigo-500 text-white hover:bg-indigo-600 shadow-lg shadow-indigo-500/25 hover:shadow-xl hover:shadow-indigo-500/30"
                     : "bg-[#0F172A] text-white hover:bg-[#1E293B] hover:shadow-lg"
-                }`}
+                  }`}
               >
                 {plan.cta}
                 <ArrowRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform duration-200" />
               </MagneticButton>
-            </motion.div>
+            </div>
           ))}
-        </motion.div>
+        </div>
 
-        <motion.p
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-          transition={{ delay: 0.4 }}
+        <p
           className="text-center text-sm text-slate-400 mt-8"
         >
           All plans include a 14-day free trial. No credit card required. Cancel anytime.
-        </motion.p>
+        </p>
       </div>
     </section>
   );

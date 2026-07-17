@@ -1,6 +1,5 @@
 "use client";
 
-import { motion } from "framer-motion";
 import {
   MessageSquare,
   CalendarCheck,
@@ -9,7 +8,6 @@ import {
   Users,
   ThumbsUp,
 } from "lucide-react";
-import { AnimatedCounter } from "../AnimatedCounter";
 
 const metrics = [
   { icon: MessageSquare, label: "Conversations", value: 12847, displayValue: "12,847", change: "+34%", color: "text-emerald-600", bg: "bg-emerald-50" },
@@ -20,27 +18,14 @@ const metrics = [
   { icon: ThumbsUp, label: "CSAT Score", value: 5, displayValue: "4.8/5", suffix: ".8/5", change: "+0.4", color: "text-pink-600", bg: "bg-pink-50" },
 ];
 
-const containerVariants = {
-  hidden: { opacity: 0 },
-  show: { opacity: 1, transition: { staggerChildren: 0.06 } },
-};
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 16 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] } },
-};
 
 function MiniChart({ delay = 0 }: { delay?: number }) {
   const bars = [35, 55, 40, 70, 45, 80, 60, 90, 75, 95, 85, 100];
   return (
     <div className="flex items-end gap-1 h-16" aria-hidden="true">
       {bars.map((h, i) => (
-        <motion.div
+        <div
           key={i}
-          initial={{ height: 0 }}
-          whileInView={{ height: `${h}%` }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.5, delay: delay + i * 0.04, ease: [0.22, 1, 0.36, 1] }}
           className="flex-1 rounded-t bg-gradient-to-t from-emerald-500/20 to-emerald-500/60"
         />
       ))}
@@ -62,11 +47,7 @@ export function AnalyticsPreview() {
       />
 
       <div className="relative mx-auto max-w-6xl">
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, amount: 0.3 }}
-          transition={{ duration: 0.5 }}
+        <div
           className="text-center mb-14 sm:mb-16"
         >
           <h2 id="analytics-heading" className="text-3xl sm:text-4xl md:text-5xl font-bold text-white tracking-tight mb-4 leading-[1.15]">
@@ -79,14 +60,10 @@ export function AnalyticsPreview() {
           <p className="text-base sm:text-lg text-slate-400 max-w-2xl mx-auto">
             See what your customers ask, where they drop off, and how your AI improves over time.
           </p>
-        </motion.div>
+        </div>
 
         {/* Dashboard mockup */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, amount: 0.2 }}
-          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+        <div
           className="rounded-3xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-sm overflow-hidden shadow-[0_32px_64px_rgb(0,0,0,0.3)]"
         >
           {/* Dashboard header */}
@@ -107,17 +84,12 @@ export function AnalyticsPreview() {
 
           {/* Metrics grid */}
           <div className="p-4 sm:p-6">
-            <motion.div
-              initial="hidden"
-              whileInView="show"
-              viewport={{ once: true, amount: 0.2 }}
-              variants={containerVariants}
+            <div
               className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 mb-5 sm:mb-6"
             >
               {metrics.map((m) => (
-                <motion.div
+                <div
                   key={m.label}
-                  variants={itemVariants}
                   className="bg-white/[0.04] border border-white/[0.06] rounded-xl p-3.5 sm:p-4"
                 >
                   <div className="flex items-center gap-2 mb-2.5 sm:mb-3">
@@ -130,9 +102,9 @@ export function AnalyticsPreview() {
                     <p className="text-[11px] text-slate-500">{m.label}</p>
                     <span className="text-[10px] font-semibold text-emerald-400">{m.change}</span>
                   </div>
-                </motion.div>
+                </div>
               ))}
-            </motion.div>
+            </div>
 
             {/* Chart */}
             <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-4 sm:p-5">
@@ -149,7 +121,7 @@ export function AnalyticsPreview() {
               <MiniChart delay={0.3} />
             </div>
           </div>
-        </motion.div>
+        </div>
       </div>
     </section>
   );

@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 
 type Sender = "user" | "agent";
 
@@ -54,12 +53,10 @@ function TypingBubble({ side }: { side: Sender }) {
         }}
       >
         {[0, 1, 2].map((i) => (
-          <motion.span
+          <span
             key={i}
             className="w-[4px] h-[4px] rounded-full"
             style={{ background: isUser ? "#8FC9AE" : "#8696A0" }}
-            animate={{ opacity: [0.3, 1, 0.3], y: [0, -3, 0] }}
-            transition={{ duration: 0.9, repeat: Infinity, delay: i * 0.15 }}
           />
         ))}
       </div>
@@ -113,11 +110,7 @@ function BubbleTail({ side }: { side: "left" | "right" }) {
 function Bubble({ msg, isFirstInGroup }: { msg: ChatMessage; isFirstInGroup: boolean }) {
   const isUser = msg.from === "user";
   return (
-    <motion.div
-      layout
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.2, ease: "easeOut" }}
+    <div
       className={`flex ${isUser ? "justify-end" : "justify-start"} ${isFirstInGroup ? "mt-2" : "mt-[2px]"}`}
     >
       <div
@@ -149,7 +142,7 @@ function Bubble({ msg, isFirstInGroup }: { msg: ChatMessage; isFirstInGroup: boo
           {isUser && <CheckMarks />}
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 }
 
@@ -221,8 +214,6 @@ export function ChatSimulation() {
           TODAY
         </div>
       </div>
-
-      <AnimatePresence initial={false}>
         {visible.map((msg, i) => {
           const prevMsg = i > 0 ? visible[i - 1] : null;
           const isFirstInGroup = !prevMsg || prevMsg.from !== msg.from;
@@ -231,7 +222,6 @@ export function ChatSimulation() {
           );
         })}
         {typingFor && <TypingBubble key="typing" side={typingFor} />}
-      </AnimatePresence>
     </div>
   );
 }

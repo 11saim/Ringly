@@ -1,39 +1,13 @@
 "use client";
 
-import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
-import { useRef } from "react";
 import { ChatSimulation } from "./ChatSimulation";
 
 export function PhoneMockup() {
-  const ref = useRef<HTMLDivElement>(null);
-  const x = useMotionValue(0);
-  const y = useMotionValue(0);
-
-  const mouseXSpring = useSpring(x, { stiffness: 150, damping: 20 });
-  const mouseYSpring = useSpring(y, { stiffness: 150, damping: 20 });
-
-  const rotateX = useTransform(mouseYSpring, [-0.5, 0.5], ["6deg", "-6deg"]);
-  const rotateY = useTransform(mouseXSpring, [-0.5, 0.5], ["-6deg", "6deg"]);
 
   return (
     <div className="relative w-full h-full">
-      <motion.div
-        ref={ref}
-        initial={{ opacity: 0, scale: 0.92, y: 20 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        transition={{ duration: 0.7, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
-        style={{
-          rotateX,
-          rotateY,
-          transformStyle: "preserve-3d",
-          perspective: 1000,
-        }}
-        className="absolute left-[8px] top-[6px] w-full max-w-[300px] mx-auto"
-        role="img"
-        aria-label="WhatsApp conversation showing Ringly AI agent booking an appointment"
-      >
         {/* Screen */}
-        <div className="relative bg-black rounded-[2.7rem] overflow-hidden h-[640px]">
+        <div className="absolute left-[8px] top-[6px] w-full max-w-[300px] mx-auto bg-black rounded-[2.7rem] overflow-hidden h-[640px]">
           {/* Dynamic Island */}
           <div className="absolute top-[12px] left-1/2 -translate-x-1/2 w-[100px] h-[28px] bg-black rounded-full z-30 ring-1 ring-white/15" aria-hidden="true">
             <div className="absolute top-[13px] right-[10px] w-[3px] h-[3px] rounded-full bg-[#FF3B30]" />
@@ -76,12 +50,12 @@ export function PhoneMockup() {
 
             {/* Avatar */}
             <div className="w-[30px] h-[30px] rounded-full shrink-0 flex items-center justify-center" style={{ background: "#6D5844" }} aria-hidden="true">
-              <span className="text-white text-[13px] font-medium">A</span>
+              <span className="text-white text-[13px] font-medium">S</span>
             </div>
 
             {/* Contact name */}
             <div className="flex-1 min-w-0">
-              <p className="text-white font-medium text-[14px] leading-[1.2] truncate">Andy</p>
+              <p className="text-white font-medium text-[14px] leading-[1.2] truncate">Salon</p>
             </div>
 
             {/* Header icons */}
@@ -163,7 +137,6 @@ export function PhoneMockup() {
           {/* Home indicator */}
           <div className="absolute bottom-[8px] left-1/2 -translate-x-1/2 w-[120px] h-[4px] rounded-full bg-white/80 z-20" aria-hidden="true" />
         </div>
-      </motion.div>
       <img src="phone-mockup.png" alt="phone-mockup" className="max-h-[650px] w-auto " />
     </div>
   );

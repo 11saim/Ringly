@@ -1,4 +1,4 @@
-import { MarketingHeader } from "@/components/marketing/MarketingHeader";
+import { MarketingHeader } from "@/components/marketing/navbar";
 import { MarketingFooter } from "@/components/marketing/MarketingFooter";
 
 export default function MarketingLayout({ children }: { children: React.ReactNode }) {

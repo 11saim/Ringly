@@ -1,6 +1,5 @@
 "use client";
 
-import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
 import { useRef } from "react";
 import {
   MessageSquare,
@@ -112,31 +111,10 @@ const windows = [
 
 function WindowCard({ window: win, index }: { window: typeof windows[0]; index: number }) {
   const ref = useRef<HTMLDivElement>(null);
-  const x = useMotionValue(0);
-  const y = useMotionValue(0);
-  const springX = useSpring(x, { stiffness: 200, damping: 25 });
-  const springY = useSpring(y, { stiffness: 200, damping: 25 });
-  const rotateX = useTransform(springY, [-0.5, 0.5], ["3deg", "-3deg"]);
-  const rotateY = useTransform(springX, [-0.5, 0.5], ["-3deg", "3deg"]);
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!ref.current) return;
-    const rect = ref.current.getBoundingClientRect();
-    x.set((e.clientX - rect.left) / rect.width - 0.5);
-    y.set((e.clientY - rect.top) / rect.height - 0.5);
-  };
 
   return (
-    <motion.div
+    <div
       ref={ref}
-      initial={{ opacity: 0, y: 30, scale: 0.95 }}
-      whileInView={{ opacity: 1, y: 0, scale: 1 }}
-      viewport={{ once: true, amount: 0.3 }}
-      transition={{ duration: 0.5, delay: index * 0.1, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] }}
-      onMouseMove={handleMouseMove}
-      onMouseLeave={() => { x.set(0); y.set(0); }}
-      style={{ rotateX, rotateY, transformStyle: "preserve-3d" }}
-      whileHover={{ y: -6 }}
       className={`${win.width} bg-white rounded-2xl border border-black/[0.06] shadow-[0_8px_30px_rgb(0,0,0,0.06)] overflow-hidden shrink-0 transition-shadow duration-300 hover:shadow-[0_16px_40px_rgb(0,0,0,0.1)]`}
     >
       {/* Window header */}
@@ -153,7 +131,7 @@ function WindowCard({ window: win, index }: { window: typeof windows[0]; index: 
       </div>
       {/* Window content */}
       <div className="max-h-[240px] overflow-hidden">{win.content}</div>
-    </motion.div>
+    </div>
   );
 }
 
@@ -164,11 +142,7 @@ export function ProductShowcase() {
       <div className="absolute inset-0 bg-gradient-to-b from-[#FAFAFA] via-white to-[#FAFAFA]" aria-hidden="true" />
 
       <div className="relative mx-auto max-w-6xl">
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, amount: 0.3 }}
-          transition={{ duration: 0.5 }}
+        <div
           className="text-center mb-14 sm:mb-16"
         >
           <h2 id="showcase-heading" className="text-3xl sm:text-4xl md:text-5xl font-bold text-[#0F172A] tracking-tight mb-4 leading-[1.15]">
@@ -177,7 +151,7 @@ export function ProductShowcase() {
           <p className="text-base sm:text-lg text-slate-500 max-w-2xl mx-auto">
             From conversations to bookings to analytics — everything works together seamlessly.
           </p>
-        </motion.div>
+        </div>
 
         {/* Floating windows grid */}
         <div className="flex flex-wrap justify-center gap-5 sm:gap-6" style={{ perspective: 1000 }} role="list">

@@ -1,6 +1,5 @@
 "use client";
 
-import { motion } from "framer-motion";
 import { ArrowRight, Clock, Users, Zap, TrendingUp } from "lucide-react";
 
 const transformations = [
@@ -38,25 +37,12 @@ const transformations = [
   },
 ];
 
-const containerVariants = {
-  hidden: { opacity: 0 },
-  show: { opacity: 1, transition: { staggerChildren: 0.15 } },
-};
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 20 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] } },
-};
 
 export function Transformations() {
   return (
     <section className="relative py-24 sm:py-28 px-5 sm:px-6" aria-labelledby="transformations-heading">
       <div className="mx-auto max-w-6xl">
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, amount: 0.3 }}
-          transition={{ duration: 0.5 }}
+        <div
           className="text-center mb-14 sm:mb-16"
         >
           <h2 id="transformations-heading" className="text-3xl sm:text-4xl md:text-5xl font-bold text-[#0F172A] tracking-tight mb-4 leading-[1.15]">
@@ -65,19 +51,14 @@ export function Transformations() {
           <p className="text-base sm:text-lg text-slate-500 max-w-2xl mx-auto">
             Not just features. Real transformations that impact your bottom line.
           </p>
-        </motion.div>
+        </div>
 
-        <motion.div
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true, amount: 0.2 }}
-          variants={containerVariants}
+        <div
           className="space-y-6 sm:space-y-8"
         >
           {transformations.map((t, i) => (
-            <motion.div
+            <div
               key={i}
-              variants={itemVariants}
               className="grid md:grid-cols-[1fr_auto_1fr] gap-4 sm:gap-6 items-center"
             >
               {/* Before */}
@@ -98,14 +79,12 @@ export function Transformations() {
 
               {/* Arrow */}
               <div className="flex justify-center">
-                <motion.div
-                  whileHover={{ scale: 1.15, rotate: 180 }}
-                  transition={{ duration: 0.3 }}
+                <div
                   className="w-10 h-10 rounded-full bg-[#0F172A] flex items-center justify-center shadow-lg"
                   aria-hidden="true"
                 >
                   <ArrowRight className="h-4 w-4 text-white" />
-                </motion.div>
+                </div>
               </div>
 
               {/* After */}
@@ -123,9 +102,9 @@ export function Transformations() {
                   </div>
                 </div>
               </div>
-            </motion.div>
+            </div>
           ))}
-        </motion.div>
+        </div>
       </div>
     </section>
   );

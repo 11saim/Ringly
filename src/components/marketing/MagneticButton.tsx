@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
+import { useState } from "react";
 import { useRef } from "react";
 import type { ReactNode } from "react";
 
@@ -18,28 +18,25 @@ export function MagneticButton({
   strength = 0.3,
 }: MagneticButtonProps) {
   const ref = useRef<HTMLDivElement>(null);
-  const x = useMotionValue(0);
-  const y = useMotionValue(0);
+  const [x, setX] = useState(0);
+  const [y, setY] = useState(0);
 
-  const springX = useSpring(x, { stiffness: 300, damping: 20 });
-  const springY = useSpring(y, { stiffness: 300, damping: 20 });
-
-  const moveX = useTransform(springX, [-0.5, 0.5], [-15, 15]);
-  const moveY = useTransform(springY, [-0.5, 0.5], [-8, 8]);
+  const moveX = x * 30; // map -0.5..0.5 to -15..15
+  const moveY = y * 16; // map -0.5..0.5 to -8..8
 
   const handleMouseMove = (e: React.MouseEvent) => {
     if (!ref.current) return;
     const rect = ref.current.getBoundingClientRect();
-    x.set((e.clientX - rect.left) / rect.width - 0.5);
-    y.set((e.clientY - rect.top) / rect.height - 0.5);
+    setX((e.clientX - rect.left) / rect.width - 0.5);
+    setY((e.clientY - rect.top) / rect.height - 0.5);
   };
 
   const handleMouseLeave = () => {
-    x.set(0);
-    y.set(0);
+    setX(0);
+    setY(0);
   };
 
-  const Wrapper = href ? motion.a : motion.div;
+  const Wrapper = href ? "a" : "div";
   const wrapperProps = href ? { href } : {};
 
   return (
@@ -48,9 +45,7 @@ export function MagneticButton({
       {...wrapperProps}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
-      style={{ x: moveX, y: moveY }}
-      whileHover={{ scale: 1.03 }}
-      whileTap={{ scale: 0.97 }}
+      style={{ transform: `translate(${moveX}px, ${moveY}px)` }}
       className={className}
     >
       {children}

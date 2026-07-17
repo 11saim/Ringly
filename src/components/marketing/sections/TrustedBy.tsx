@@ -1,6 +1,5 @@
 "use client";
 
-import { motion } from "framer-motion";
 import {
   Stethoscope,
   Scissors,
@@ -35,12 +34,7 @@ export function TrustedBy() {
   return (
     <section className="relative py-16 sm:py-20 overflow-hidden" aria-labelledby="trusted-heading">
       <div className="mx-auto max-w-6xl px-5 sm:px-6">
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, amount: 0.3 }}
-          transition={{ duration: 0.5 }}
-          className="text-center mb-10 sm:mb-12"
+        <div className="text-center mb-10 sm:mb-12"
         >
           <p id="trusted-heading" className="text-xs font-semibold uppercase tracking-[0.15em] text-slate-400 mb-3">
             Trusted by modern businesses
@@ -48,21 +42,15 @@ export function TrustedBy() {
           <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-[#0F172A] tracking-tight">
             From salons to clinics, Ringly handles it all
           </h2>
-        </motion.div>
+        </div>
 
-        <motion.div
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true, amount: 0.2 }}
-          variants={containerVariants}
+        <div
           className="flex flex-wrap justify-center gap-3 sm:gap-4"
           role="list"
         >
           {categories.map((cat) => (
-            <motion.div
+            <div
               key={cat.label}
-              variants={itemVariants}
-              whileHover={{ scale: 1.04, y: -2 }}
               className="flex items-center gap-3 px-4 sm:px-5 py-2.5 sm:py-3 rounded-2xl border border-black/[0.06] bg-white shadow-[0_2px_8px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_24px_rgb(0,0,0,0.06)] transition-all duration-300 cursor-default"
               role="listitem"
             >
@@ -70,9 +58,9 @@ export function TrustedBy() {
                 <cat.icon className={`h-4 w-4 sm:h-5 sm:w-5 ${cat.color}`} />
               </div>
               <span className="text-sm font-semibold text-slate-700">{cat.label}</span>
-            </motion.div>
+            </div>
           ))}
-        </motion.div>
+        </div>
       </div>
     </section>
   );

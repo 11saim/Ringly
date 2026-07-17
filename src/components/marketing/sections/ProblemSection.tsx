@@ -1,6 +1,5 @@
 "use client";
 
-import { motion } from "framer-motion";
 import { MessageSquare, Clock, PhoneMissed, UserX, TrendingDown } from "lucide-react";
 import { AnimatedCounter } from "../AnimatedCounter";
 
@@ -69,11 +68,7 @@ export function ProblemSection() {
       />
 
       <div className="relative mx-auto max-w-6xl">
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, amount: 0.3 }}
-          transition={{ duration: 0.5 }}
+        <div
           className="text-center mb-14 sm:mb-16"
         >
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-semibold mb-6">
@@ -88,20 +83,14 @@ export function ProblemSection() {
           <p className="text-base sm:text-lg text-slate-400 max-w-2xl mx-auto leading-relaxed">
             A hairdresser missed $2,000 in Saturday bookings because 32 WhatsApp messages piled up while she was busy with clients.
           </p>
-        </motion.div>
+        </div>
 
-        <motion.div
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true, amount: 0.2 }}
-          variants={containerVariants}
+        <div
           className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4"
         >
           {problems.map((p) => (
-            <motion.div
+            <div
               key={p.label}
-              variants={itemVariants}
-              whileHover={{ y: -4, scale: 1.02 }}
               className="relative group rounded-2xl border border-white/[0.06] bg-white/[0.03] backdrop-blur-sm p-5 sm:p-6 text-center transition-shadow duration-300 hover:shadow-[0_8px_30px_rgb(255,255,255,0.04)]"
             >
               <div className={`inline-flex p-3 rounded-xl ${p.bg} mb-4`} aria-hidden="true">
@@ -117,9 +106,9 @@ export function ProblemSection() {
                 <span className="text-xs sm:text-sm text-slate-400">{p.unit}</span>
               </div>
               <p className="text-xs sm:text-sm text-slate-500">{p.label}</p>
-            </motion.div>
+            </div>
           ))}
-        </motion.div>
+        </div>
       </div>
     </section>
   );

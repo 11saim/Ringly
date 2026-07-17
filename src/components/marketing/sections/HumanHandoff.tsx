@@ -1,6 +1,5 @@
 "use client";
 
-import { motion } from "framer-motion";
 import { Bot, User, Phone, CheckCircle2 } from "lucide-react";
 
 const timeline = [
@@ -30,12 +29,7 @@ export function HumanHandoff() {
       <div className="relative mx-auto max-w-6xl">
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
           {/* Left: Content */}
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, amount: 0.3 }}
-            transition={{ duration: 0.5 }}
-          >
+          <div>
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold mb-6">
               <Bot className="h-3.5 w-3.5" aria-hidden="true" />
               Built-in safety net
@@ -56,38 +50,27 @@ export function HumanHandoff() {
                 "Agent resumes automatically after resolution",
                 "Manual takeover available at any time",
               ].map((point, i) => (
-                <motion.div
+                <div
                   key={i}
-                  initial={{ opacity: 0, x: -12 }}
-                  whileInView={{ opacity: 1, x: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: 0.3 + i * 0.1 }}
                   className="flex items-center gap-3"
                   role="listitem"
                 >
                   <CheckCircle2 className="h-5 w-5 text-emerald-500 shrink-0" aria-hidden="true" />
                   <span className="text-sm text-slate-600">{point}</span>
-                </motion.div>
+                </div>
               ))}
             </div>
-          </motion.div>
+          </div>
 
           {/* Right: Timeline */}
-          <motion.div
-            initial="hidden"
-            whileInView="show"
-            viewport={{ once: true, amount: 0.2 }}
-            variants={containerVariants}
-            className="relative"
-          >
+          <div className="relative">
             {/* Vertical line */}
             <div className="absolute left-5 sm:left-6 top-0 bottom-0 w-px bg-gradient-to-b from-blue-200 via-amber-200 to-emerald-200" aria-hidden="true" />
 
             <div className="space-y-4 sm:space-y-6">
               {timeline.map((step) => (
-                <motion.div
+                <div
                   key={step.time}
-                  variants={itemVariants}
                   className="relative flex items-start gap-4 sm:gap-5 pl-0.5"
                 >
                   {/* Timeline dot */}
@@ -103,10 +86,10 @@ export function HumanHandoff() {
                     </div>
                     <p className="text-xs text-slate-500">{step.detail}</p>
                   </div>
-                </motion.div>
+                </div>
               ))}
             </div>
-          </motion.div>
+          </div>
         </div>
       </div>
     </section>

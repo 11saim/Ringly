@@ -1,6 +1,5 @@
 "use client";
 
-import { motion } from "framer-motion";
 import {
   MessageSquare,
   Bot,
@@ -59,11 +58,7 @@ export function SolutionSection() {
   return (
     <section id="solution" className="relative py-24 sm:py-28 px-5 sm:px-6 overflow-hidden" aria-labelledby="solution-heading">
       <div className="mx-auto max-w-6xl">
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, amount: 0.3 }}
-          transition={{ duration: 0.5 }}
+        <div
           className="text-center mb-14 sm:mb-16"
         >
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold mb-6">
@@ -80,14 +75,10 @@ export function SolutionSection() {
           <p className="text-base sm:text-lg text-slate-500 max-w-2xl mx-auto leading-relaxed">
             No new number. No app for your customers. Just your existing WhatsApp, now powered by an AI that works 24/7.
           </p>
-        </motion.div>
+        </div>
 
         {/* Workflow visualization */}
-        <motion.div
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true, amount: 0.2 }}
-          variants={containerVariants}
+        <div
           className="relative"
         >
           {/* Connecting line */}
@@ -95,14 +86,12 @@ export function SolutionSection() {
 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6">
             {steps.map((step, i) => (
-              <motion.div
+              <div
                 key={step.label}
-                variants={itemVariants}
                 className="relative flex flex-col items-center text-center"
               >
                 {/* Step circle */}
-                <motion.div
-                  whileHover={{ scale: 1.08, y: -4 }}
+                <div
                   className={`relative w-16 h-16 sm:w-20 sm:h-20 rounded-2xl ${step.bg} border ${step.border} flex items-center justify-center mb-4 sm:mb-5 shadow-[0_4px_16px_rgb(0,0,0,0.04)] transition-shadow duration-300 hover:shadow-[0_8px_24px_rgb(0,0,0,0.08)]`}
                 >
                   <step.icon className={`h-7 w-7 sm:h-8 sm:w-8 ${step.color}`} aria-hidden="true" />
@@ -110,7 +99,7 @@ export function SolutionSection() {
                   <span className="absolute -top-2 -right-2 w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-[#0F172A] text-white text-[10px] sm:text-[11px] font-bold flex items-center justify-center font-mono" aria-hidden="true">
                     {i + 1}
                   </span>
-                </motion.div>
+                </div>
 
                 <h3 className="text-base sm:text-lg font-bold text-[#0F172A] mb-1">{step.label}</h3>
                 <p className="text-xs sm:text-sm text-slate-500 max-w-[180px]">{step.desc}</p>
@@ -121,10 +110,10 @@ export function SolutionSection() {
                     <ArrowRight className="h-5 w-5 text-slate-300" />
                   </div>
                 )}
-              </motion.div>
+              </div>
             ))}
           </div>
-        </motion.div>
+        </div>
       </div>
     </section>
   );

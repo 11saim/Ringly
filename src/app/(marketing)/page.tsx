@@ -13,12 +13,11 @@ import { Testimonials } from "@/components/marketing/sections/Testimonials";
 import { Pricing } from "@/components/marketing/sections/Pricing";
 import { FAQ } from "@/components/marketing/sections/FAQ";
 import { FinalCTA } from "@/components/marketing/sections/FinalCTA";
-import { ScrollProgress } from "@/components/marketing/ScrollProgress";
+
 
 export default function Home() {
   return (
     <div className="relative bg-[#FAFAFA] text-slate-900 overflow-hidden">
-      <ScrollProgress />
       <HeroSection />
       <TrustedBy />
       <ProblemSection />
