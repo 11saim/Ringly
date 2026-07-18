@@ -71,7 +71,7 @@ export function ProblemSection() {
         <div
           className="text-center mb-14 sm:mb-16"
         >
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-semibold mb-6">
+          <div className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 text-sm font-semibold mb-6">
             <TrendingDown className="h-3.5 w-3.5" aria-hidden="true" />
             The real cost of manual WhatsApp
           </div>
@@ -85,27 +85,17 @@ export function ProblemSection() {
           </p>
         </div>
 
-        <div
-          className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4"
-        >
+        <div className="grid grid-cols-2 lg:grid-cols-4">
           {problems.map((p) => (
-            <div
-              key={p.label}
-              className="relative group rounded-2xl border border-white/[0.06] bg-white/[0.03] backdrop-blur-sm p-5 sm:p-6 text-center transition-shadow duration-300 hover:shadow-[0_8px_30px_rgb(255,255,255,0.04)]"
-            >
-              <div className={`inline-flex p-3 rounded-xl ${p.bg} mb-4`} aria-hidden="true">
-                <p.icon className={`h-5 w-5 sm:h-6 sm:w-6 ${p.color}`} />
-              </div>
-              <div className="flex items-baseline justify-center gap-1 mb-1">
-                <AnimatedCounter
-                  target={p.metric}
-                  suffix={p.suffix}
-                  prefix={p.prefix}
-                  className="text-2xl sm:text-3xl md:text-4xl font-bold text-white font-mono"
-                />
-                <span className="text-xs sm:text-sm text-slate-400">{p.unit}</span>
-              </div>
-              <p className="text-xs sm:text-sm text-slate-500">{p.label}</p>
+            <div key={p.label} className="text-center">
+              <AnimatedCounter
+                target={p.metric}
+                suffix={p.suffix}
+                prefix={p.prefix}
+                className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white font-mono leading-none"
+              />
+              <p className={`text-sm font-medium ${p.color} mt-2`}>{p.unit}</p>
+              <p className="text-xs text-slate-500 mt-1">{p.label}</p>
             </div>
           ))}
         </div>

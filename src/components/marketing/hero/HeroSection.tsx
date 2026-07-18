@@ -69,7 +69,7 @@ export function HeroSection() {
               <div className="moving-border-wrapper">
                 <Link
                   href="/login"
-                  className="see-action-hover group inline-flex items-center justify-center gap-2.5 px-7 py-3.5 bg-white text-[#0F172A] rounded-full font-semibold text-[15px] transition-all duration-300 shadow-[0_2px_6px_rgb(0,0,0,0.04)] hover:shadow-[0_4px_16px_rgba(34,197,94,0.12)]"
+                  className="see-action-hover w-full group inline-flex items-center justify-center gap-2.5 px-7 py-3.5 bg-white text-[#0F172A] rounded-full font-semibold text-[15px] transition-all duration-300 shadow-[0_2px_6px_rgb(0,0,0,0.04)] hover:shadow-[0_4px_16px_rgba(34,197,94,0.12)]"
                 >
                   <Zap className="h-4 w-4 text-emerald-500 fill-emerald-500/20 group-hover:fill-emerald-500/40 transition-all duration-300" />
                   See It In Action

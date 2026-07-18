@@ -105,16 +105,16 @@ export function MarketingHeader() {
           </nav>
 
           {/* Desktop CTAs */}
-          <div className="hidden md:flex items-center gap-1.5 shrink-0">
+          <div className="hidden md:flex items-center gap-2 shrink-0">
             <div className="moving-border-wrapper">
               <Link
                 href="/login"
-                className="see-action-hover moving-border-inner px-4 py-2 text-[13px] font-medium text-[#0F172A] bg-white rounded-full border border-black/[0.08] overflow-hidden transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6366F1]"
+                className="group inline-flex items-center justify-center w-[120px] px-5 py-3 bg-white text-[#0F172A] rounded-full font-semibold text-[13px] transition-all duration-300 hover:shadow-[0_4px_16px_rgba(34,197,94,0.12)]"
               >
                 Sign in
               </Link>
             </div>
-            <FlowButton text="Get Started" href="/signup" />
+            <FlowButton text="Get Started" href="/signup" className="!w-[140px] !py-3 !px-5 !text-[13px]" />
           </div>
 
           {/* Mobile: Hamburger */}
@@ -169,23 +169,27 @@ export function MarketingHeader() {
                   </a>
                 ))}
               </nav>
-              <div className="border-t border-black/[0.04] p-3">
-                <Link
-                  href="/login"
-                  onClick={closeMobile}
-                  className="block px-4 py-3 rounded-full bg-[#c0f4de] text-[#0F172A] text-[15px] font-semibold text-center hover:bg-[#a8e6c8] transition-colors shadow-[0_2px_8px_rgba(0,0,0,0.12)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6366F1] focus-visible:ring-offset-2 animate-dropdown-link mb-3"
-                  style={{ animationDelay: `${navLinks.length * 40}ms` }}
-                >
-                  Sign In
-                </Link>
-                <Link
-                  href="/signup"
-                  onClick={closeMobile}
-                  className="block px-4 py-3 rounded-full bg-[#0F172A] text-white text-[15px] font-semibold text-center hover:bg-[#1E293B] transition-colors shadow-[0_2px_8px_rgba(0,0,0,0.12)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6366F1] focus-visible:ring-offset-2 animate-dropdown-link"
-                  style={{ animationDelay: `${navLinks.length * 40}ms` }}
-                >
-                  Get Started
-                </Link>
+              <div className="border-t border-black/[0.04] p-3 flex flex-col gap-2">
+                <div className="moving-border-wrapper w-full">
+                  <Link
+                    href="/login"
+                    onClick={closeMobile}
+                    className="block w-full px-5 py-2.5 rounded-full bg-white text-[#0F172A] text-[13px] font-semibold text-center transition-all duration-300 hover:shadow-[0_4px_16px_rgba(34,197,94,0.12)] animate-dropdown-link"
+                    style={{ animationDelay: `${navLinks.length * 40}ms` }}
+                  >
+                    Sign In
+                  </Link>
+                </div>
+                <div className="moving-border-wrapper w-full">
+                  <Link
+                    href="/signup"
+                    onClick={closeMobile}
+                    className="block w-full px-5 py-2.5 rounded-full bg-[#111111] text-white text-[13px] font-semibold text-center hover:bg-[#1E293B] transition-colors animate-dropdown-link"
+                    style={{ animationDelay: `${(navLinks.length + 1) * 40}ms` }}
+                  >
+                    Get Started
+                  </Link>
+                </div>
               </div>
             </div>
           </div>

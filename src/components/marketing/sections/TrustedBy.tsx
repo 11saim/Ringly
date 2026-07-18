@@ -1,66 +1,95 @@
 "use client";
 
-import {
-  Stethoscope,
-  Scissors,
-  UtensilsCrossed,
-  ShoppingBag,
-  Wrench,
-  Briefcase,
-  Store,
-} from "lucide-react";
-
-const categories = [
-  { icon: Stethoscope, label: "Clinics", color: "text-blue-600", bg: "bg-blue-50" },
-  { icon: Scissors, label: "Salons", color: "text-pink-600", bg: "bg-pink-50" },
-  { icon: UtensilsCrossed, label: "Restaurants", color: "text-orange-600", bg: "bg-orange-50" },
-  { icon: ShoppingBag, label: "Retail Stores", color: "text-emerald-600", bg: "bg-emerald-50" },
-  { icon: Wrench, label: "Repair Shops", color: "text-amber-600", bg: "bg-amber-50" },
-  { icon: Briefcase, label: "Consultants", color: "text-indigo-600", bg: "bg-indigo-50" },
-  { icon: Store, label: "E-commerce", color: "text-violet-600", bg: "bg-violet-50" },
+const colors = [
+  "#22C55E",
+  "#6366F1",
+  "#F59E0B",
+  "#10B981",
+  "#3B82F6",
+  "#0F172A",
 ];
 
-const containerVariants = {
-  hidden: { opacity: 0 },
-  show: { opacity: 1, transition: { staggerChildren: 0.05 } },
-};
+const row1 = [
+  "Glow Dermatology",
+  "Bite & Sip Cafe",
+  "Luxe Nail Bar",
+  "FreshCuts Salon",
+  "Urban Paws Vet",
+  "The Fit Lab",
+  "Bloom Florist",
+  "QuickFix Repairs",
+  "Sunrise Yoga",
+  "Craft & Pour",
+];
 
-const itemVariants = {
-  hidden: { opacity: 0, y: 16, scale: 0.96 },
-  show: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] } },
-};
+const row2 = [
+  "Smile Dental",
+  "Savory Bites",
+  "Silk Hair Studio",
+  "Pawfect Pets",
+  "Iron Gym",
+  "Blossom Spa",
+  "TechFix Pro",
+  "Cloud Nine Bakery",
+  "Trailhead Outfitters",
+  "Zen Wellness",
+];
+
+function MarqueeRow({
+  items,
+  direction,
+  speed = 30,
+}: {
+  items: string[];
+  direction: "left" | "right";
+  speed?: number;
+}) {
+  const duplicated = [...items, ...items, ...items, ...items];
+
+  return (
+    <div className="overflow-hidden whitespace-nowrap py-2" aria-hidden="true">
+      <div
+        className="inline-flex items-center"
+        style={{
+          animation: `marquee-${direction} ${speed}s linear infinite`,
+        }}
+      >
+        {duplicated.map((name, i) => (
+          <span
+            key={`${name}-${i}`}
+            className="mx-4 sm:mx-6 text-2xl sm:text-3xl md:text-4xl font-black uppercase tracking-tight select-none"
+            style={{ color: colors[i % colors.length], opacity: 0.6 }}
+          >
+            <span className="mx-1 sm:mx-2 text-[#22C55E]">✦</span>
+            {name}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export function TrustedBy() {
   return (
-    <section className="relative py-16 sm:py-20 overflow-hidden" aria-labelledby="trusted-heading">
-      <div className="mx-auto max-w-6xl px-5 sm:px-6">
-        <div className="text-center mb-10 sm:mb-12"
-        >
-          <p id="trusted-heading" className="text-xs font-semibold uppercase tracking-[0.15em] text-slate-400 mb-3">
-            Trusted by modern businesses
-          </p>
-          <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-[#0F172A] tracking-tight">
-            From salons to clinics, Ringly handles it all
+    <section className="relative -mt-2 sm:-mt-4 pt-6 pb-12 sm:pt-8 sm:pb-16 overflow-hidden" aria-labelledby="trusted-heading">
+      <div className="mx-auto max-w-6xl px-5 sm:px-6 mb-6 sm:mb-8">
+        <div className="text-center">
+          <h2 id="trusted-heading" className="text-2xl sm:text-3xl md:text-[2.75rem] font-bold text-[#0F172A] tracking-[-0.02em] leading-tight">
+            Businesses that{" "}
+            <span className="bg-gradient-to-r from-[#22C55E] to-[#6366F1] bg-clip-text text-transparent">
+              never miss
+            </span>{" "}
+            a message
           </h2>
+          <p className="mt-3 text-sm sm:text-base text-slate-400 max-w-md mx-auto">
+            Clinics, salons, restaurants, retailers — all on WhatsApp with Ringly
+          </p>
         </div>
+      </div>
 
-        <div
-          className="flex flex-wrap justify-center gap-3 sm:gap-4"
-          role="list"
-        >
-          {categories.map((cat) => (
-            <div
-              key={cat.label}
-              className="flex items-center gap-3 px-4 sm:px-5 py-2.5 sm:py-3 rounded-2xl border border-black/[0.06] bg-white shadow-[0_2px_8px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_24px_rgb(0,0,0,0.06)] transition-all duration-300 cursor-default"
-              role="listitem"
-            >
-              <div className={`p-1.5 sm:p-2 rounded-xl ${cat.bg}`} aria-hidden="true">
-                <cat.icon className={`h-4 w-4 sm:h-5 sm:w-5 ${cat.color}`} />
-              </div>
-              <span className="text-sm font-semibold text-slate-700">{cat.label}</span>
-            </div>
-          ))}
-        </div>
+      <div className="flex flex-col gap-1">
+        <MarqueeRow items={row1} direction="left" speed={40} />
+        <MarqueeRow items={row2} direction="right" speed={45} />
       </div>
     </section>
   );
