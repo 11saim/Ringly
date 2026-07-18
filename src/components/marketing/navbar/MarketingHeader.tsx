@@ -2,7 +2,6 @@
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import Link from "next/link";
-import { MessageSquareText } from "lucide-react";
 import { FlowButton } from "@/components/ui/flow-button";
 
 const navLinks = [
@@ -70,17 +69,28 @@ export function MarketingHeader() {
           {/* Logo */}
           <Link
             href="/"
-            className="flex items-center gap-2 pl-3 pr-2 py-1.5 text-[#0F172A] font-semibold text-[15px] tracking-tight rounded-full transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6366F1] shrink-0"
+            className="flex items-center gap-2.5 pl-3 pr-2 py-1.5 rounded-full transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6366F1] shrink-0"
             aria-label="Ringly - Home"
           >
-            <div
-              className="flex items-center justify-center w-8 h-8 rounded-lg bg-[#c0f4de]"
-              aria-hidden="true"
-            >
-              <MessageSquareText className="h-4 w-4 text-white" />
+            <div className="relative w-9 h-9" aria-hidden="true">
+              {/* Color ring — thick bottom-left, thin top-right */}
+              <div
+                className="absolute -inset-[2.5px] rounded-full"
+                style={{
+                  background: "conic-gradient(from 135deg, #22C55E, #6366F1, #F59E0B, #3B82F6, #10B981, #22C55E)",
+                }}
+              />
+              {/* White mask — centered */}
+              <div
+                className="absolute inset-[1px] bg-white rounded-full"
+              />
+              {/* Inner filled circle */}
+              <div className="absolute inset-[3px] rounded-full bg-[#0F172A] flex items-center justify-center">
+                <span className="text-white text-[13px] font-bold leading-none">R</span>
+              </div>
             </div>
             <span
-              className="transition-all text-xl duration-300 overflow-hidden whitespace-nowrap"
+              className="text-[#0F172A] text-2xl font-bold tracking-tight transition-all duration-300 overflow-hidden whitespace-nowrap"
               style={{
                 maxWidth: scrolled ? "0px" : "80px",
                 opacity: scrolled ? 0 : 1,
