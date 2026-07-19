@@ -18,12 +18,12 @@ export function HeroSection() {
   return (
     <section
       ref={sectionRef}
-      className="relative min-h-screen flex items-center overflow-hidden"
+      className="relative flex items-center overflow-hidden"
       aria-labelledby="hero-heading"
     >
       <BackgroundEffects />
 
-      <div className="relative w-full mx-auto max-w-7xl px-5 sm:px-6 pt-20 pb-12 sm:pt-24 sm:pb-16 lg:pt-25 lg:pb-28">
+      <div className="relative w-full mx-auto max-w-7xl px-5 sm:px-6 pt-10 pb-5 sm:pt-15 sm:pb-8 lg:pt-25 lg:pb-10">
         <div className="grid lg:grid-cols-[1fr_380px] gap-10 lg:gap-12 items-center">
           {/* Left */}
           <div

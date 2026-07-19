@@ -506,6 +506,73 @@
 
 @utility animate-spin-slow { animation: spin-slow 8s linear infinite; }
 
+@keyframes step-reveal {
+  from { opacity: 0; transform: translateY(32px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes step-reveal-left {
+  from { opacity: 0; transform: translateX(-20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes icon-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+}
+
+@keyframes ring-expand {
+  0% { transform: scale(1); opacity: 0.7; }
+  100% { transform: scale(1.5); opacity: 0; }
+}
+
+@keyframes ring-expand-delayed {
+  0% { transform: scale(1); opacity: 0.4; }
+  100% { transform: scale(1.7); opacity: 0; }
+}
+
+@keyframes dot-breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+}
+
+@keyframes orb-drift-1 {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(30px, 20px); }
+}
+
+@keyframes orb-drift-2 {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(-20px, 30px); }
+}
+
+@keyframes orb-drift-3 {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(25px, -15px); }
+}
+
+@keyframes line-draw {
+  from { transform: scaleY(0); }
+  to { transform: scaleY(1); }
+}
+
+@keyframes fade-up-in {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@utility animate-step-reveal { animation: step-reveal 0.7s cubic-bezier(0.22, 1, 0.36, 1) both; }
+@utility animate-step-reveal-left { animation: step-reveal-left 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
+@utility animate-icon-pulse { animation: icon-pulse 2s ease-in-out infinite; }
+@utility animate-ring-expand { animation: ring-expand 1.8s ease-out infinite; }
+@utility animate-ring-expand-delayed { animation: ring-expand-delayed 1.8s ease-out infinite 0.4s; }
+@utility animate-dot-breathe { animation: dot-breathe 2s ease-in-out infinite; }
+@utility animate-orb-1 { animation: orb-drift-1 20s ease-in-out infinite; }
+@utility animate-orb-2 { animation: orb-drift-2 25s ease-in-out infinite; }
+@utility animate-orb-3 { animation: orb-drift-3 22s ease-in-out infinite; }
+@utility animate-line-draw { animation: line-draw 0.6s cubic-bezier(0.22, 1, 0.36, 1) both; }
+@utility animate-fade-up-in { animation: fade-up-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
 @property --border-angle {
   syntax: "<angle>";
   initial-value: 0deg;
