@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useEffect, useMemo, useCallback } from "react";
+import { useRef, useState, useEffect, useCallback } from "react";
 import {
   MessageSquare,
   Bot,
@@ -21,7 +21,6 @@ const steps = [
     detail: "Supports text, images, voice notes, and documents",
     color: "#3b82f6",
     gradient: "from-blue-500 to-cyan-400",
-    bg: "rgba(59,130,246,0.04)",
   },
   {
     num: "02",
@@ -32,7 +31,6 @@ const steps = [
     detail: "Trained on your business knowledge base",
     color: "#10b981",
     gradient: "from-emerald-500 to-green-400",
-    bg: "rgba(16,185,129,0.04)",
   },
   {
     num: "03",
@@ -43,7 +41,6 @@ const steps = [
     detail: "Integrates with your existing tools & calendar",
     color: "#8b5cf6",
     gradient: "from-violet-500 to-purple-400",
-    bg: "rgba(139,92,246,0.04)",
   },
   {
     num: "04",
@@ -54,7 +51,6 @@ const steps = [
     detail: "Full analytics, conversation history & insights",
     color: "#f59e0b",
     gradient: "from-amber-500 to-orange-400",
-    bg: "rgba(245,158,11,0.04)",
   },
 ];
 
@@ -74,42 +70,34 @@ function StepCard({
   return (
     <button
       onClick={onClick}
-      className="group relative w-full text-left rounded-2xl will-change-transform"
+      className="group relative w-full text-left"
       style={{
         opacity: isRevealed ? 1 : 0,
-        transform: isRevealed ? "translateY(0)" : "translateY(32px)",
-        transition: "opacity 0.6s cubic-bezier(0.22,1,0.36,1), transform 0.6s cubic-bezier(0.22,1,0.36,1)",
-        transitionDelay: isRevealed ? `${index * 100}ms` : "0ms",
-        animation: "none",
+        transform: isRevealed ? "translateY(0)" : "translateY(24px)",
+        transition: "opacity 0.5s ease, transform 0.5s ease",
+        transitionDelay: isRevealed ? `${index * 80}ms` : "0ms",
       }}
     >
       {/* Gradient border — active only */}
       <div
-        className="absolute -inset-px rounded-2xl pointer-events-none"
+        className="absolute -inset-px rounded-xl pointer-events-none"
         style={{
           background: `linear-gradient(135deg, ${step.color}50, ${step.color}15, transparent 60%)`,
           opacity: isActive ? 1 : 0,
-          transition: "opacity 0.4s ease",
+          transition: "opacity 0.3s ease",
         }}
       />
 
       {/* Card body */}
       <div
-        className="relative rounded-2xl overflow-hidden"
+        className="relative rounded-xl overflow-hidden"
         style={{
-          background: isActive ? step.bg : "#ffffff",
-          border: `1px solid ${isActive ? step.color + "25" : "rgba(0,0,0,0.05)"}`,
+          background: isActive ? `${step.color}06` : "#ffffff",
+          border: `1px solid ${isActive ? step.color + "20" : "rgba(0,0,0,0.06)"}`,
           boxShadow: isActive
-            ? `0 8px 32px -8px ${step.color}18, 0 2px 8px rgba(0,0,0,0.04)`
+            ? `0 4px 20px -4px ${step.color}15, 0 1px 4px rgba(0,0,0,0.03)`
             : "0 1px 3px rgba(0,0,0,0.03)",
-          transition: "background 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease, transform 0.3s ease",
-          transform: isActive ? "scale(1)" : "scale(1)",
-        }}
-        onMouseEnter={(e) => {
-          if (!isActive) (e.currentTarget as HTMLDivElement).style.transform = "scale(1.008)";
-        }}
-        onMouseLeave={(e) => {
-          (e.currentTarget as HTMLDivElement).style.transform = "scale(1)";
+          transition: "background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease",
         }}
       >
         {/* Top accent */}
@@ -118,45 +106,30 @@ function StepCard({
           style={{
             background: `linear-gradient(to right, transparent, ${step.color}, transparent)`,
             opacity: isActive ? 1 : 0,
-            transition: "opacity 0.4s ease",
+            transition: "opacity 0.3s ease",
           }}
         />
 
-        <div className="relative p-5 sm:p-6">
-          <div className="flex items-start gap-4">
+        <div className="relative p-4 sm:p-5">
+          <div className="flex items-start gap-3">
             {/* Icon */}
-            <div className="relative shrink-0">
-              <div
-                className={`w-12 h-12 sm:w-14 sm:h-14 rounded-xl flex items-center justify-center bg-gradient-to-br ${step.gradient}`}
-                style={{
-                  boxShadow: isActive ? `0 6px 20px -4px ${step.color}30` : "none",
-                  transition: "box-shadow 0.4s ease",
-                }}
-              >
-                <step.icon
-                  className="h-5 w-5 sm:h-6 sm:w-6 text-white"
-                  style={{
-                    transform: isActive ? "scale(1.1)" : "scale(1)",
-                    transition: "transform 0.3s ease",
-                  }}
-                />
-              </div>
-
-              {/* Single subtle pulse on active */}
-              {isActive && (
-                <div
-                  className="absolute inset-0 rounded-xl animate-ring-expand"
-                  style={{ border: `2px solid ${step.color}40` }}
-                />
-              )}
+            <div
+              className={`w-10 h-10 sm:w-12 sm:h-12 rounded-lg flex items-center justify-center bg-gradient-to-br ${step.gradient} shrink-0`}
+              style={{
+                boxShadow: isActive ? `0 4px 14px -3px ${step.color}30` : "none",
+                transition: "box-shadow 0.3s ease, transform 0.3s ease",
+                transform: isActive ? "scale(1.05)" : "scale(1)",
+              }}
+            >
+              <step.icon className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
             </div>
 
             {/* Content */}
             <div className="flex-1 min-w-0 pt-0.5">
-              <div className="flex items-center gap-2.5 mb-1.5">
+              <div className="flex items-center gap-2 mb-1">
                 <span
                   className="font-mono text-[10px] font-bold tracking-[0.15em]"
-                  style={{ color: isActive ? step.color : "#cbd5e1" }}
+                  style={{ color: isActive ? step.color : "#cbd5e1", transition: "color 0.3s ease" }}
                 >
                   {step.num}
                 </span>
@@ -166,48 +139,38 @@ function StepCard({
                     background: isActive
                       ? `linear-gradient(to right, ${step.color}25, transparent)`
                       : "rgba(0,0,0,0.04)",
-                    transition: "background 0.4s ease",
+                    transition: "background 0.3s ease",
                   }}
                 />
               </div>
 
               <h3
-                className="text-base sm:text-lg font-bold mb-1"
-                style={{
-                  color: isActive ? "#0f172a" : "#475569",
-                  transition: "color 0.3s ease",
-                }}
+                className="text-sm sm:text-base font-bold mb-0.5"
+                style={{ color: isActive ? "#0f172a" : "#475569", transition: "color 0.3s ease" }}
               >
                 {step.title}
               </h3>
 
               <p
-                className="text-sm leading-relaxed"
-                style={{
-                  color: isActive ? "#64748b" : "#94a3b8",
-                  transition: "color 0.3s ease",
-                }}
+                className="text-xs sm:text-sm leading-relaxed"
+                style={{ color: isActive ? "#64748b" : "#94a3b8", transition: "color 0.3s ease" }}
               >
                 {step.description}
               </p>
 
-              {/* Expandable detail */}
+              {/* Detail chip */}
               <div
+                className="overflow-hidden"
                 style={{
-                  maxHeight: isActive ? "80px" : "0px",
+                  maxHeight: isActive ? "60px" : "0px",
                   opacity: isActive ? 1 : 0,
-                  marginTop: isActive ? "12px" : "0px",
-                  overflow: "hidden",
-                  transition: "max-height 0.4s cubic-bezier(0.22,1,0.36,1), opacity 0.3s ease, margin 0.3s ease",
+                  marginTop: isActive ? "8px" : "0px",
+                  transition: "max-height 0.3s ease, opacity 0.2s ease, margin 0.2s ease",
                 }}
               >
                 <div
-                  className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium"
-                  style={{
-                    background: `${step.color}0a`,
-                    color: step.color,
-                    border: `1px solid ${step.color}15`,
-                  }}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium"
+                  style={{ background: `${step.color}0a`, color: step.color, border: `1px solid ${step.color}12` }}
                 >
                   <Check className="w-3 h-3 shrink-0" />
                   {step.detail}
@@ -217,11 +180,11 @@ function StepCard({
 
             {/* Arrow */}
             <div
-              className="shrink-0 mt-2"
+              className="shrink-0 mt-1"
               style={{
                 opacity: isActive ? 1 : 0,
-                transform: isActive ? "translateX(0)" : "translateX(-8px)",
-                transition: "opacity 0.3s ease, transform 0.3s ease",
+                transform: isActive ? "translateX(0)" : "translateX(-6px)",
+                transition: "opacity 0.25s ease, transform 0.25s ease",
               }}
             >
               <ArrowRight className="w-4 h-4" style={{ color: step.color }} />
@@ -235,11 +198,12 @@ function StepCard({
 
 export function SolutionSection() {
   const sectionRef = useRef<HTMLElement>(null);
+  const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const activeRef = useRef(0);
   const [activeStep, setActiveStep] = useState(0);
   const [revealed, setRevealed] = useState(false);
-  const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
 
-  // Single observer for section reveal
+  // Section reveal
   useEffect(() => {
     const section = sectionRef.current;
     if (!section) return;
@@ -251,7 +215,7 @@ export function SolutionSection() {
     return () => observer.disconnect();
   }, []);
 
-  // Track active step by scroll position — which card is closest to viewport center
+  // Scroll-driven active step — only calls setState when index changes
   useEffect(() => {
     let ticking = false;
 
@@ -275,7 +239,11 @@ export function SolutionSection() {
           }
         });
 
-        setActiveStep(closestIndex);
+        if (closestIndex !== activeRef.current) {
+          activeRef.current = closestIndex;
+          setActiveStep(closestIndex);
+        }
+
         ticking = false;
       });
     };
@@ -287,10 +255,11 @@ export function SolutionSection() {
 
   const handleStepClick = useCallback((index: number) => {
     setActiveStep(index);
+    activeRef.current = index;
     cardRefs.current[index]?.scrollIntoView({ behavior: "smooth", block: "center" });
   }, []);
 
-  const progressPercent = useMemo(() => ((activeStep + 1) / steps.length) * 100, [activeStep]);
+  const progressPercent = ((activeStep + 1) / steps.length) * 100;
 
   return (
     <section
@@ -299,40 +268,29 @@ export function SolutionSection() {
       aria-labelledby="solution-heading"
       className="relative py-24 sm:py-22 px-5 sm:px-6 overflow-hidden"
     >
-      {/* Background */}
       <div
         className="absolute inset-0"
         style={{ background: "linear-gradient(160deg, #f8faff 0%, #f0f4ff 30%, #eef6ff 50%, #f5f0ff 80%, #faf5ff 100%)" }}
       />
 
-      {/* Floating blobs — static, no animation */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden="true">
-        <div
-          className="absolute -top-32 -right-32 w-[500px] h-[500px] rounded-full opacity-30"
-          style={{ background: "radial-gradient(circle, rgba(59,130,246,0.1) 0%, transparent 60%)" }}
-        />
-        <div
-          className="absolute top-1/2 -left-40 w-[400px] h-[400px] rounded-full opacity-20"
-          style={{ background: "radial-gradient(circle, rgba(139,92,246,0.08) 0%, transparent 60%)" }}
-        />
-        <div
-          className="absolute -bottom-20 right-1/4 w-[450px] h-[450px] rounded-full opacity-25"
-          style={{ background: "radial-gradient(circle, rgba(16,185,129,0.08) 0%, transparent 60%)" }}
-        />
+        <div className="absolute -top-32 -right-32 w-[500px] h-[500px] rounded-full opacity-30" style={{ background: "radial-gradient(circle, rgba(59,130,246,0.1) 0%, transparent 60%)" }} />
+        <div className="absolute top-1/2 -left-40 w-[400px] h-[400px] rounded-full opacity-20" style={{ background: "radial-gradient(circle, rgba(139,92,246,0.08) 0%, transparent 60%)" }} />
+        <div className="absolute -bottom-20 right-1/4 w-[450px] h-[450px] rounded-full opacity-25" style={{ background: "radial-gradient(circle, rgba(16,185,129,0.08) 0%, transparent 60%)" }} />
       </div>
 
       <div className="relative mx-auto max-w-3xl">
         {/* Header */}
         <div
-          className="text-center mb-16 sm:mb-20"
+          className="text-center mb-14 sm:mb-16"
           style={{
             opacity: revealed ? 1 : 0,
-            transform: revealed ? "translateY(0)" : "translateY(24px)",
+            transform: revealed ? "translateY(0)" : "translateY(20px)",
             transition: "opacity 0.6s ease, transform 0.6s ease",
           }}
         >
           <div
-            className="inline-flex items-center gap-2.5 px-5 py-2.5 rounded-full border text-sm font-semibold mb-7"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full border text-sm font-semibold mb-6"
             style={{
               background: "rgba(16,185,129,0.06)",
               borderColor: "rgba(16,185,129,0.15)",
@@ -347,7 +305,7 @@ export function SolutionSection() {
           </div>
           <h2
             id="solution-heading"
-            className="text-3xl sm:text-4xl md:text-[2.75rem] font-bold tracking-tight mb-5 leading-[1.15]"
+            className="text-3xl sm:text-4xl md:text-[2.75rem] font-bold tracking-tight mb-4 leading-[1.15]"
             style={{ color: "#0f172a" }}
           >
             Your existing WhatsApp number
@@ -365,48 +323,38 @@ export function SolutionSection() {
         {/* Steps */}
         <div className="relative" role="list">
           {/* Timeline track */}
+          <div className="absolute left-[21px] sm:left-[25px] top-0 bottom-0 w-[2px] rounded-full" aria-hidden="true" style={{ background: "rgba(0,0,0,0.06)" }} />
+          {/* Timeline progress */}
           <div
-            className="absolute left-[25px] sm:left-[29px] top-0 bottom-0 w-[2px] rounded-full"
-            aria-hidden="true"
-            style={{ background: "rgba(0,0,0,0.05)" }}
-          />
-          {/* Timeline progress — height transition instead of clipPath */}
-          <div
-            className="absolute left-[25px] sm:left-[29px] top-0 w-[2px] rounded-full"
+            className="absolute left-[21px] sm:left-[25px] top-0 w-[2px] rounded-full"
             aria-hidden="true"
             style={{
               background: "linear-gradient(to bottom, #3b82f6, #10b981, #8b5cf6, #f59e0b)",
               height: `${progressPercent}%`,
-              transition: "height 0.5s cubic-bezier(0.22,1,0.36,1)",
+              transition: "height 0.4s cubic-bezier(0.22,1,0.36,1)",
             }}
           />
 
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             {steps.map((step, i) => (
               <div
                 key={step.num}
                 ref={(el) => { cardRefs.current[i] = el; }}
-                className="relative pl-14 sm:pl-[64px]"
+                className="relative pl-12 sm:pl-14"
                 role="listitem"
               >
                 {/* Dot */}
-                <div className="absolute left-[19px] sm:left-[23px] top-6 sm:top-7 z-10" aria-hidden="true">
-                  <div className="relative w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full">
+                <div className="absolute left-[17px] sm:left-[21px] top-5 sm:top-6 z-10" aria-hidden="true">
+                  <div className="relative w-3 h-3 sm:w-3.5 sm:h-3.5 rounded-full">
                     <div
                       className="absolute inset-0 rounded-full"
                       style={{
                         background: i <= activeStep ? step.color : "transparent",
                         border: i <= activeStep ? "none" : "2px solid rgba(0,0,0,0.1)",
-                        boxShadow: i <= activeStep ? `0 0 8px ${step.color}30` : "none",
-                        transition: "background 0.4s ease, box-shadow 0.4s ease",
+                        boxShadow: i <= activeStep ? `0 0 6px ${step.color}30` : "none",
+                        transition: "background 0.3s ease, box-shadow 0.3s ease",
                       }}
                     />
-                    {i <= activeStep && (
-                      <div
-                        className="absolute inset-[3px] rounded-full"
-                        style={{ background: "radial-gradient(circle, rgba(255,255,255,0.5) 0%, transparent 70%)" }}
-                      />
-                    )}
                   </div>
                 </div>
 
