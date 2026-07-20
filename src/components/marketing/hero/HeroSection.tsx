@@ -1,16 +1,17 @@
 "use client";
 
 import { useRef } from "react";
-import {
-  ArrowRight,
-  Zap,
-  CheckCircle2,
-} from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { BackgroundEffects } from "./BackgroundEffects";
 import { PhoneMockup } from "./PhoneMockup";
 import { FlowButton } from "@/components/ui/flow-button";
 import Link from "next/link";
 
+const features = [
+  { icon: "💬", label: "No new number needed" },
+  { icon: "⚡", label: "Set up in minutes" },
+  { icon: "🚀", label: "Free to start" },
+];
 
 export function HeroSection() {
   const sectionRef = useRef<HTMLElement>(null);
@@ -18,85 +19,56 @@ export function HeroSection() {
   return (
     <section
       ref={sectionRef}
-      className="relative flex items-center overflow-hidden"
+      className="relative overflow-hidden"
       aria-labelledby="hero-heading"
     >
       <BackgroundEffects />
 
-      <div className="relative w-full mx-auto max-w-7xl px-5 sm:px-6 pt-10 pb-5 sm:pt-15 sm:pb-8 lg:pt-25 lg:pb-10">
-        <div className="grid lg:grid-cols-[1fr_380px] gap-10 lg:gap-12 items-center">
+      <div className="relative w-full mx-auto max-w-7xl px-5 sm:px-6 pt-16 pb-12 sm:pt-20 sm:pb-14 lg:pt-28 lg:pb-20">
+        <div className="grid lg:grid-cols-[7fr_3fr] gap-8 lg:gap-10 items-center min-h-[480px] lg:min-h-[540px]">
           {/* Left */}
-          <div
-            className="flex flex-col gap-6 sm:gap-7 max-w-2xl"
-          >
-
+          <div className="flex flex-col gap-7 sm:gap-8">
             {/* Headline */}
             <h1
               id="hero-heading"
-              className="text-[2.5rem] sm:text-5xl lg:text-[3.5rem] xl:text-[4rem] font-bold tracking-[-0.03em] leading-[1.08] text-[#0F172A]"
+              className="text-[2.5rem] sm:text-[3.25rem] lg:text-[3.75rem] xl:text-[4.25rem] font-bold tracking-[-0.04em] leading-[1.05] text-[#1a1a1a]"
             >
-              Your WhatsApp.
-              <br />
-              Now it never
-              <br />
+              Your{" "}
               <span className="relative inline-block">
-                <span className="relative z-10">misses a message</span>
-                <span
-                  className="absolute bottom-1 left-0 right-0 h-3 sm:h-3.5 bg-gradient-to-r from-emerald-200/60 to-emerald-300/40 -z-0 origin-left rounded-sm"
-                />
+                <span className="relative z-10">WhatsApp</span>
+                <span className="absolute bottom-[0.08em] left-0 right-0 h-[0.35em] bg-[#d4f5e0] -z-0" />
               </span>
               .
+              <br />
+              <div className="text-[1.5rem] sm:text-[2.25rem] lg:text-[2.75rem] xl:text-[3.25rem]">
+                Now it never{" "}
+                <span className="relative">
+                  <span className="relative z-10">misses a message</span>
+                  <span className="absolute bottom-[0.08em] left-0 right-0 h-[0.35em] bg-[#d4f5e0] -z-0" />
+                </span>
+                .
+              </div>
             </h1>
 
             {/* Sub-copy */}
-            <p
-              className="text-base sm:text-lg lg:text-xl text-slate-500 max-w-lg leading-relaxed"
-            >
+            <p className="text-base sm:text-lg lg:text-xl text-[#555] max-w-2xl leading-relaxed">
               Ringly puts an AI agent on your existing WhatsApp number. It
               answers questions, books appointments, takes orders, and hands off
               to your team when needed.
-              <span className="text-slate-700 font-medium">
-                {" "}Your customers don&apos;t change anything.
-              </span>
             </p>
 
-            {/* CTAs */}
-            <div
-              className="flex flex-col sm:flex-row gap-3 mt-1"
-            >
+            {/* CTA */}
+            <div className="mt-1">
               <FlowButton text="Get Started Free" href="/signup" />
-
-              <div className="moving-border-wrapper">
-                <Link
-                  href="/login"
-                  className="see-action-hover w-full group inline-flex items-center justify-center gap-2.5 px-7 py-3.5 bg-white text-[#0F172A] rounded-full font-semibold text-[15px] transition-all duration-300 shadow-[0_2px_6px_rgb(0,0,0,0.04)] hover:shadow-[0_4px_16px_rgba(34,197,94,0.12)]"
-                >
-                  <Zap className="h-4 w-4 text-emerald-500 fill-emerald-500/20 group-hover:fill-emerald-500/40 transition-all duration-300" />
-                  See It In Action
-                </Link>
-              </div>
-            </div>
-
-            {/* Trust signals */}
-            <div
-              className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-slate-400"
-            >
-              {["No new number needed", "Non-technical setup", "Free to start"].map((item) => (
-                <span key={item} className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-emerald-500" aria-hidden="true" />
-                  {item}
-                </span>
-              ))}
             </div>
           </div>
 
           {/* Right */}
           <div>
-            {/* Phone mockup */}
             <PhoneMockup />
           </div>
         </div>
       </div>
     </section>
   );
-} 
+}
