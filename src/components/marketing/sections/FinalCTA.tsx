@@ -1,7 +1,7 @@
 "use client";
 
 import { ArrowRight, CheckCircle2 } from "lucide-react";
-import { MagneticButton } from "../MagneticButton";
+import Link from "next/link";
 
 export function FinalCTA() {
   return (
@@ -50,20 +50,20 @@ export function FinalCTA() {
             <div
               className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 mb-8 sm:mb-10"
             >
-              <MagneticButton
+              <Link
                 href="/signup"
                 className="group inline-flex items-center gap-2.5 px-7 sm:px-8 py-3.5 sm:py-4 bg-white text-[#0F172A] rounded-full font-bold text-sm sm:text-base shadow-[0_8px_30px_rgb(0,0,0,0.2)] hover:shadow-[0_12px_40px_rgb(0,0,0,0.25)] transition-shadow duration-300"
               >
                 Deploy Your Agent Today
                 <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 group-hover:translate-x-0.5 transition-transform duration-200" />
-              </MagneticButton>
+              </Link>
 
-              <MagneticButton
+              <Link
                 href="#demo"
                 className="inline-flex items-center gap-2.5 px-7 sm:px-8 py-3.5 sm:py-4 bg-white/10 backdrop-blur-sm border border-white/10 text-white rounded-full font-semibold text-sm sm:text-base hover:bg-white/15 transition-all duration-200"
               >
                 Book a Demo
-              </MagneticButton>
+              </Link>
             </div>
 
             <div

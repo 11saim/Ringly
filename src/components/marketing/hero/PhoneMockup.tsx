@@ -137,7 +137,7 @@ export function PhoneMockup() {
           {/* Home indicator */}
           <div className="absolute bottom-[8px] left-1/2 -translate-x-1/2 w-[120px] h-[4px] rounded-full bg-white/80 z-20" aria-hidden="true" />
         </div>
-      <img src="phone-mockup.png" alt="phone-mockup" className="max-h-[650px] w-auto " />
+      <img src="phone-mockup.png" alt="phone-mockup" className="max-h-[650px] w-auto" />
     </div>
   );
 }

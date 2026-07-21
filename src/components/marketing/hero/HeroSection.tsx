@@ -24,8 +24,8 @@ export function HeroSection() {
     >
       <BackgroundEffects />
 
-      <div className="relative w-full mx-auto max-w-7xl px-5 sm:px-6 pt-16 pb-12 sm:pt-20 sm:pb-14 lg:pt-28 lg:pb-20">
-        <div className="grid lg:grid-cols-[7fr_3fr] gap-8 lg:gap-10 items-center min-h-[480px] lg:min-h-[540px]">
+      <div className="relative w-full mx-auto max-w-7xl px-5 sm:px-6 pt-16 pb-12 sm:pt-25 sm:pb-14 lg:pt-28 lg:pb-20">
+        <div className="flex justify-between gap-8 lg:gap-10 items-center min-h-[480px] lg:min-h-[540px]">
           {/* Left */}
           <div className="flex flex-col gap-7 sm:gap-8">
             {/* Headline */}
@@ -64,7 +64,7 @@ export function HeroSection() {
           </div>
 
           {/* Right */}
-          <div>
+          <div className="shrink-0">
             <PhoneMockup />
           </div>
         </div>
