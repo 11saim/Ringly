@@ -293,6 +293,33 @@
   }
 }
 
+@keyframes marquee-horizontal {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes marquee-horizontal-reverse {
+  from {
+    transform: translateX(-50%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes marquee-vertical {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-50%);
+  }
+}
+
 @keyframes pulse-dot {
   0%,
   100% {
@@ -614,4 +641,79 @@
   position: relative;
   overflow: hidden;
   border-radius: inherit;
+}
+
+/* Dashboard widget animations */
+@keyframes bar-grow {
+  from { transform: scaleY(0); }
+  to { transform: scaleY(1); }
+}
+
+@keyframes dashboard-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+@keyframes dashboard-shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+@keyframes metric-pop {
+  from { opacity: 0; transform: scale(0.9) translateY(8px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@utility animate-bar-grow {
+  animation: bar-grow 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@utility animate-dashboard-float {
+  animation: dashboard-float 6s ease-in-out infinite;
+}
+
+@utility animate-dashboard-shimmer {
+  animation: dashboard-shimmer 3s ease-in-out infinite;
+}
+
+@utility animate-metric-pop {
+  animation: metric-pop 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Chat animations */
+@keyframes chat-pop {
+  from { opacity: 0; transform: translateY(8px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes typing-dot {
+  0%, 100% { opacity: 0.3; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+
+@utility animate-chat-pop {
+  animation: chat-pop 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@utility animate-typing {
+  animation: typing-dot 1.2s ease-in-out infinite;
+}
+
+/* Glow animations */
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.06; transform: scale(1); }
+  50% { opacity: 0.12; transform: scale(1.1); }
+}
+
+@keyframes pulse-glow-delayed {
+  0%, 100% { opacity: 0.04; transform: scale(1); }
+  50% { opacity: 0.09; transform: scale(1.15); }
+}
+
+@utility animate-pulse-glow {
+  animation: pulse-glow 3s ease-in-out infinite;
+}
+
+@utility animate-pulse-glow-delayed {
+  animation: pulse-glow-delayed 3s ease-in-out infinite 1.5s;
 }

@@ -1,14 +1,12 @@
 "use client";
 
-import { useRef, useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import {
   MessageSquare,
   Bot,
   CalendarCheck,
   BarChart3,
-  Sparkles,
   ArrowRight,
-  Check,
 } from "lucide-react";
 
 const steps = [
@@ -18,9 +16,8 @@ const steps = [
     title: "Customer messages you",
     description:
       "A customer reaches out on WhatsApp with a question about booking, pricing, or availability — just like they normally would.",
-    detail: "Supports text, images, voice notes, and documents",
+    highlight: "Supports text, images, voice notes & documents",
     color: "#3b82f6",
-    gradient: "from-blue-500 to-cyan-400",
   },
   {
     num: "02",
@@ -28,9 +25,8 @@ const steps = [
     title: "AI understands & reasons",
     description:
       "The AI reads the message, understands intent, checks your calendar, inventory, or FAQ — and decides exactly what to do.",
-    detail: "Trained on your business knowledge base",
+    highlight: "Trained on your business knowledge base",
     color: "#10b981",
-    gradient: "from-emerald-500 to-green-400",
   },
   {
     num: "03",
@@ -38,9 +34,8 @@ const steps = [
     title: "Books, orders, or replies",
     description:
       "It books the appointment, places the order, answers the question — whatever the customer needed, instantly.",
-    detail: "Integrates with your existing tools & calendar",
+    highlight: "Integrates with your existing tools & calendar",
     color: "#8b5cf6",
-    gradient: "from-violet-500 to-purple-400",
   },
   {
     num: "04",
@@ -48,325 +43,154 @@ const steps = [
     title: "You see everything",
     description:
       "Every conversation, every booking, every dollar — logged and visible in your dashboard in real time.",
-    detail: "Full analytics, conversation history & insights",
+    highlight: "Full analytics, conversation history & insights",
     color: "#f59e0b",
-    gradient: "from-amber-500 to-orange-400",
   },
 ];
 
-function StepCard({
-  step,
-  index,
-  isActive,
-  isRevealed,
-  onClick,
-}: {
-  step: (typeof steps)[number];
-  index: number;
-  isActive: boolean;
-  isRevealed: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className="group relative w-full text-left"
-      style={{
-        opacity: isRevealed ? 1 : 0,
-        transform: isRevealed ? "translateY(0)" : "translateY(24px)",
-        transition: "opacity 0.5s ease, transform 0.5s ease",
-        transitionDelay: isRevealed ? `${index * 80}ms` : "0ms",
-      }}
-    >
-      {/* Gradient border — active only */}
-      <div
-        className="absolute -inset-px rounded-xl pointer-events-none"
-        style={{
-          background: `linear-gradient(135deg, ${step.color}50, ${step.color}15, transparent 60%)`,
-          opacity: isActive ? 1 : 0,
-          transition: "opacity 0.3s ease",
-        }}
-      />
-
-      {/* Card body */}
-      <div
-        className="relative rounded-xl overflow-hidden"
-        style={{
-          background: isActive ? `${step.color}06` : "#ffffff",
-          border: `1px solid ${isActive ? step.color + "20" : "rgba(0,0,0,0.06)"}`,
-          boxShadow: isActive
-            ? `0 4px 20px -4px ${step.color}15, 0 1px 4px rgba(0,0,0,0.03)`
-            : "0 1px 3px rgba(0,0,0,0.03)",
-          transition: "background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease",
-        }}
-      >
-        {/* Top accent */}
-        <div
-          className="absolute top-0 left-0 right-0 h-[2px]"
-          style={{
-            background: `linear-gradient(to right, transparent, ${step.color}, transparent)`,
-            opacity: isActive ? 1 : 0,
-            transition: "opacity 0.3s ease",
-          }}
-        />
-
-        <div className="relative p-4 sm:p-5">
-          <div className="flex items-start gap-3">
-            {/* Icon */}
-            <div
-              className={`w-10 h-10 sm:w-12 sm:h-12 rounded-lg flex items-center justify-center bg-gradient-to-br ${step.gradient} shrink-0`}
-              style={{
-                boxShadow: isActive ? `0 4px 14px -3px ${step.color}30` : "none",
-                transition: "box-shadow 0.3s ease, transform 0.3s ease",
-                transform: isActive ? "scale(1.05)" : "scale(1)",
-              }}
-            >
-              <step.icon className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
-            </div>
-
-            {/* Content */}
-            <div className="flex-1 min-w-0 pt-0.5">
-              <div className="flex items-center gap-2 mb-1">
-                <span
-                  className="font-mono text-[10px] font-bold tracking-[0.15em]"
-                  style={{ color: isActive ? step.color : "#cbd5e1", transition: "color 0.3s ease" }}
-                >
-                  {step.num}
-                </span>
-                <div
-                  className="h-px flex-1"
-                  style={{
-                    background: isActive
-                      ? `linear-gradient(to right, ${step.color}25, transparent)`
-                      : "rgba(0,0,0,0.04)",
-                    transition: "background 0.3s ease",
-                  }}
-                />
-              </div>
-
-              <h3
-                className="text-sm sm:text-base font-bold mb-0.5"
-                style={{ color: isActive ? "#0f172a" : "#475569", transition: "color 0.3s ease" }}
-              >
-                {step.title}
-              </h3>
-
-              <p
-                className="text-xs sm:text-sm leading-relaxed"
-                style={{ color: isActive ? "#64748b" : "#94a3b8", transition: "color 0.3s ease" }}
-              >
-                {step.description}
-              </p>
-
-              {/* Detail chip */}
-              <div
-                className="overflow-hidden"
-                style={{
-                  maxHeight: isActive ? "60px" : "0px",
-                  opacity: isActive ? 1 : 0,
-                  marginTop: isActive ? "8px" : "0px",
-                  transition: "max-height 0.3s ease, opacity 0.2s ease, margin 0.2s ease",
-                }}
-              >
-                <div
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium"
-                  style={{ background: `${step.color}0a`, color: step.color, border: `1px solid ${step.color}12` }}
-                >
-                  <Check className="w-3 h-3 shrink-0" />
-                  {step.detail}
-                </div>
-              </div>
-            </div>
-
-            {/* Arrow */}
-            <div
-              className="shrink-0 mt-1"
-              style={{
-                opacity: isActive ? 1 : 0,
-                transform: isActive ? "translateX(0)" : "translateX(-6px)",
-                transition: "opacity 0.25s ease, transform 0.25s ease",
-              }}
-            >
-              <ArrowRight className="w-4 h-4" style={{ color: step.color }} />
-            </div>
-          </div>
-        </div>
-      </div>
-    </button>
-  );
-}
-
 export function SolutionSection() {
-  const sectionRef = useRef<HTMLElement>(null);
-  const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const activeRef = useRef(0);
   const [activeStep, setActiveStep] = useState(0);
   const [revealed, setRevealed] = useState(false);
 
-  // Section reveal
-  useEffect(() => {
-    const section = sectionRef.current;
-    if (!section) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) setRevealed(true); },
-      { threshold: 0.1 }
-    );
-    observer.observe(section);
-    return () => observer.disconnect();
-  }, []);
-
-  // Scroll-driven active step — only calls setState when index changes
-  useEffect(() => {
-    let ticking = false;
-
-    const onScroll = () => {
-      if (ticking) return;
-      ticking = true;
-
-      requestAnimationFrame(() => {
-        const viewportCenter = window.innerHeight / 2;
-        let closestIndex = 0;
-        let closestDistance = Infinity;
-
-        cardRefs.current.forEach((card, i) => {
-          if (!card) return;
-          const rect = card.getBoundingClientRect();
-          const cardCenter = rect.top + rect.height / 2;
-          const distance = Math.abs(cardCenter - viewportCenter);
-          if (distance < closestDistance) {
-            closestDistance = distance;
-            closestIndex = i;
-          }
-        });
-
-        if (closestIndex !== activeRef.current) {
-          activeRef.current = closestIndex;
-          setActiveStep(closestIndex);
-        }
-
-        ticking = false;
-      });
-    };
-
-    window.addEventListener("scroll", onScroll, { passive: true });
-    onScroll();
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-
-  const handleStepClick = useCallback((index: number) => {
-    setActiveStep(index);
-    activeRef.current = index;
-    cardRefs.current[index]?.scrollIntoView({ behavior: "smooth", block: "center" });
-  }, []);
-
-  const progressPercent = ((activeStep + 1) / steps.length) * 100;
+  const current = steps[activeStep];
 
   return (
     <section
       id="solution"
-      ref={sectionRef}
       aria-labelledby="solution-heading"
-      className="relative py-24 sm:py-22 px-5 sm:px-6 overflow-hidden"
+      className="relative py-24 sm:py-28 px-5 sm:px-6 overflow-hidden"
+      ref={(el) => {
+        if (el && !revealed) {
+          const obs = new IntersectionObserver(
+            ([e]) => { if (e.isIntersecting) setRevealed(true); },
+            { threshold: 0.1 }
+          );
+          obs.observe(el);
+        }
+      }}
     >
-      <div
-        className="absolute inset-0"
-        style={{ background: "linear-gradient(160deg, #f8faff 0%, #f0f4ff 30%, #eef6ff 50%, #f5f0ff 80%, #faf5ff 100%)" }}
-      />
-
-      <div className="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden="true">
-        <div className="absolute -top-32 -right-32 w-[500px] h-[500px] rounded-full opacity-30" style={{ background: "radial-gradient(circle, rgba(59,130,246,0.1) 0%, transparent 60%)" }} />
-        <div className="absolute top-1/2 -left-40 w-[400px] h-[400px] rounded-full opacity-20" style={{ background: "radial-gradient(circle, rgba(139,92,246,0.08) 0%, transparent 60%)" }} />
-        <div className="absolute -bottom-20 right-1/4 w-[450px] h-[450px] rounded-full opacity-25" style={{ background: "radial-gradient(circle, rgba(16,185,129,0.08) 0%, transparent 60%)" }} />
-      </div>
+      <div className="absolute inset-0 pointer-events-none bg-white" aria-hidden="true" />
 
       <div className="relative mx-auto max-w-3xl">
         {/* Header */}
         <div
-          className="text-center mb-14 sm:mb-16"
+          className="mb-16"
           style={{
             opacity: revealed ? 1 : 0,
-            transform: revealed ? "translateY(0)" : "translateY(20px)",
-            transition: "opacity 0.6s ease, transform 0.6s ease",
+            transform: revealed ? "translateY(0)" : "translateY(16px)",
+            transition: "opacity 0.5s ease, transform 0.5s ease",
           }}
         >
-          <div
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full border text-sm font-semibold mb-6"
-            style={{
-              background: "rgba(16,185,129,0.06)",
-              borderColor: "rgba(16,185,129,0.15)",
-              color: "#059669",
-              opacity: revealed ? 1 : 0,
-              transform: revealed ? "scale(1)" : "scale(0.9)",
-              transition: "opacity 0.5s ease 0.1s, transform 0.5s ease 0.1s",
-            }}
-          >
-            <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
-            How Ringly works
-          </div>
+          <p className="text-xs font-medium tracking-widest uppercase mb-4" style={{ color: "#94a3b8" }}>
+            How it works
+          </p>
           <h2
             id="solution-heading"
-            className="text-3xl sm:text-4xl md:text-[2.75rem] font-bold tracking-tight mb-4 leading-[1.15]"
+            className="text-3xl sm:text-4xl font-bold tracking-tight mb-4"
             style={{ color: "#0f172a" }}
           >
             Your existing WhatsApp number
             <br />
-            <span className="bg-gradient-to-r from-emerald-500 via-teal-500 to-indigo-500 bg-clip-text text-transparent">
-              becomes an AI employee
-            </span>
+            becomes an AI employee
           </h2>
-          <p className="text-base sm:text-lg max-w-xl mx-auto leading-relaxed" style={{ color: "#64748b" }}>
+          <p className="text-base sm:text-lg max-w-lg leading-relaxed" style={{ color: "#64748b" }}>
             No new number. No app for your customers. Just your existing
             WhatsApp, now powered by an AI that works 24/7.
           </p>
         </div>
 
         {/* Steps */}
-        <div className="relative" role="list">
-          {/* Timeline track */}
-          <div className="absolute left-[21px] sm:left-[25px] top-0 bottom-0 w-[2px] rounded-full" aria-hidden="true" style={{ background: "rgba(0,0,0,0.06)" }} />
-          {/* Timeline progress */}
-          <div
-            className="absolute left-[21px] sm:left-[25px] top-0 w-[2px] rounded-full"
-            aria-hidden="true"
-            style={{
-              background: "linear-gradient(to bottom, #3b82f6, #10b981, #8b5cf6, #f59e0b)",
-              height: `${progressPercent}%`,
-              transition: "height 0.4s cubic-bezier(0.22,1,0.36,1)",
-            }}
-          />
-
-          <div className="space-y-2.5">
+        <div
+          style={{
+            opacity: revealed ? 1 : 0,
+            transform: revealed ? "translateY(0)" : "translateY(16px)",
+            transition: "opacity 0.5s ease 0.15s, transform 0.5s ease 0.15s",
+          }}
+        >
+          {/* Step dots */}
+          <div className="flex items-center gap-2 mb-12">
             {steps.map((step, i) => (
-              <div
+              <button
                 key={step.num}
-                ref={(el) => { cardRefs.current[i] = el; }}
-                className="relative pl-12 sm:pl-14"
-                role="listitem"
+                onClick={() => setActiveStep(i)}
+                className="flex items-center gap-2 group"
+                aria-label={`Step ${i + 1}: ${step.title}`}
               >
-                {/* Dot */}
-                <div className="absolute left-[17px] sm:left-[21px] top-5 sm:top-6 z-10" aria-hidden="true">
-                  <div className="relative w-3 h-3 sm:w-3.5 sm:h-3.5 rounded-full">
-                    <div
-                      className="absolute inset-0 rounded-full"
-                      style={{
-                        background: i <= activeStep ? step.color : "transparent",
-                        border: i <= activeStep ? "none" : "2px solid rgba(0,0,0,0.1)",
-                        boxShadow: i <= activeStep ? `0 0 6px ${step.color}30` : "none",
-                        transition: "background 0.3s ease, box-shadow 0.3s ease",
-                      }}
-                    />
-                  </div>
-                </div>
-
-                <StepCard
-                  step={step}
-                  index={i}
-                  isActive={i === activeStep}
-                  isRevealed={revealed}
-                  onClick={() => handleStepClick(i)}
+                <div
+                  className="w-3 h-3 rounded-full transition-all duration-300"
+                  style={{
+                    background: i <= activeStep ? steps[i].color : "#d1d5db",
+                    transform: i === activeStep ? "scale(1.4)" : "scale(1)",
+                    boxShadow: i === activeStep ? `0 0 12px ${steps[i].color}50` : "none",
+                  }}
                 />
-              </div>
+                {i < steps.length - 1 && (
+                  <div
+                    className="w-10 sm:w-14 h-px transition-colors duration-300"
+                    style={{
+                      background: i < activeStep ? steps[i].color : "#e5e7eb",
+                    }}
+                  />
+                )}
+              </button>
             ))}
+          </div>
+
+          {/* Active step */}
+          <div key={activeStep} className="animate-fade-in">
+            <div
+              className="rounded-2xl p-6 sm:p-8 transition-all duration-500"
+              style={{
+                background: `${current.color}08`,
+                border: `1px solid ${current.color}15`,
+              }}
+            >
+              <div className="flex items-start gap-5 mb-5">
+                <div className="shrink-0 flex flex-col items-center gap-1">
+                  <span className="text-lg font-mono font-bold" style={{ color: current.color }}>
+                    {current.num}
+                  </span>
+                  <current.icon className="w-5 h-5" style={{ color: current.color }} />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-xl sm:text-2xl font-bold mb-2" style={{ color: "#0f172a" }}>
+                    {current.title}
+                  </h3>
+                  <p className="text-sm sm:text-base leading-relaxed mb-4" style={{ color: "#64748b" }}>
+                    {current.description}
+                  </p>
+                  <p className="text-xs font-medium" style={{ color: current.color }}>
+                    {current.highlight}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Nav */}
+            <div className="flex items-center gap-4 mt-6">
+              <button
+                onClick={() => setActiveStep((p) => Math.max(0, p - 1))}
+                disabled={activeStep === 0}
+                className="text-xs font-medium transition-all disabled:opacity-20 px-3 py-1.5 rounded-lg"
+                style={{
+                  color: "#64748b",
+                  background: "rgba(0,0,0,0.04)",
+                }}
+              >
+                Previous
+              </button>
+              <button
+                onClick={() => setActiveStep((p) => Math.min(steps.length - 1, p + 1))}
+                disabled={activeStep === steps.length - 1}
+                className="text-xs font-medium inline-flex items-center gap-1 transition-all disabled:opacity-20 px-3 py-1.5 rounded-lg text-white"
+                style={{
+                  background: current.color,
+                }}
+              >
+                Next
+                <ArrowRight className="w-3 h-3" />
+              </button>
+            </div>
           </div>
         </div>
       </div>
