@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 
 // Simple hook to detect if an element is in view using IntersectionObserver.
-function useInView(ref, options = { once: true, amount: 0.5 }) {
+function useInView(ref: React.RefObject<Element | null>, options = { once: true, amount: 0.5 }) {
   const [inView, setInView] = useState(false);
 
   useEffect(() => {

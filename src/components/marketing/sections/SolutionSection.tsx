@@ -108,25 +108,25 @@ export function SolutionSection() {
           }}
         >
           {/* Step dots */}
-          <div className="flex items-center gap-2 mb-12">
+          <div className="flex items-center justify-between gap-1 sm:gap-2 mb-8 sm:mb-12 max-w-full overflow-x-auto py-1">
             {steps.map((step, i) => (
               <button
                 key={step.num}
                 onClick={() => setActiveStep(i)}
-                className="flex items-center gap-2 group"
+                className="flex items-center gap-1.5 sm:gap-2 group shrink-0"
                 aria-label={`Step ${i + 1}: ${step.title}`}
               >
                 <div
                   className="w-3 h-3 rounded-full transition-all duration-300"
                   style={{
                     background: i <= activeStep ? steps[i].color : "#d1d5db",
-                    transform: i === activeStep ? "scale(1.4)" : "scale(1)",
+                    transform: i === activeStep ? "scale(1.3)" : "scale(1)",
                     boxShadow: i === activeStep ? `0 0 12px ${steps[i].color}50` : "none",
                   }}
                 />
                 {i < steps.length - 1 && (
                   <div
-                    className="w-10 sm:w-14 h-px transition-colors duration-300"
+                    className="w-6 min-[380px]:w-10 sm:w-14 h-px transition-colors duration-300 shrink"
                     style={{
                       background: i < activeStep ? steps[i].color : "#e5e7eb",
                     }}

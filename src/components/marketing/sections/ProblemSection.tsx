@@ -183,7 +183,7 @@ export function ProblemSection() {
   return (
     <section
       ref={sectionRef}
-      className="relative py-24 sm:py-28 px-5 sm:px-6 overflow-hidden"
+      className="relative py-16 sm:py-24 lg:py-28 px-4 sm:px-6 overflow-hidden"
       aria-labelledby="problem-heading"
     >
       {/* Background */}
@@ -211,31 +211,31 @@ export function ProblemSection() {
       <div className="relative mx-auto max-w-6xl">
         {/* Header */}
         <div
-          className={`text-center mb-14 sm:mb-16 transition-all duration-700 ease-out ${revealed ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
+          className={`text-center mb-12 sm:mb-16 transition-all duration-700 ease-out ${revealed ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
             }`}
         >
           <div
-            className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 text-sm font-semibold mb-6"
+            className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 text-xs sm:text-sm font-semibold mb-6"
           >
             <TrendingDown className="h-3.5 w-3.5" aria-hidden="true" />
             The real cost of manual WhatsApp
           </div>
           <h2
             id="problem-heading"
-            className="text-3xl sm:text-4xl md:text-5xl font-bold text-white tracking-tight mb-4 leading-[1.15]"
+            className="text-2.5xl sm:text-4xl md:text-5xl font-bold text-white tracking-tight mb-4 leading-[1.15]"
           >
             Every unanswered message
             <br />
             <span className="text-red-400">is a customer you lose</span>
           </h2>
-          <p className="text-base sm:text-lg text-slate-400 max-w-2xl mx-auto leading-relaxed">
+          <p className="text-sm sm:text-lg text-slate-400 max-w-2xl mx-auto leading-relaxed">
             A hairdresser missed $2,000 in Saturday bookings because 32 WhatsApp
             messages piled up while she was busy with clients.
           </p>
         </div>
 
         {/* Stats grid */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <div className="grid grid-cols-1 min-[440px]:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           {problems.map((p, i) => (
             <StatCard key={p.label} problem={p} index={i} />
           ))}

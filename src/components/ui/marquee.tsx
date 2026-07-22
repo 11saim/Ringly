@@ -41,7 +41,7 @@ function Marquee({
             className={cn(
               "flex shrink-0 justify-start [gap:var(--gap)]",
               vertical ? "flex-col" : "flex-row",
-              !vertical && "group-hover:[animation-play-state:paused]"
+              !vertical && pauseOnHover && "group-hover:[animation-play-state:paused]"
             )}
             style={{
               animation: `marquee-${vertical ? "vertical" : reverse ? "horizontal-reverse" : "horizontal"} var(--duration) linear infinite`,

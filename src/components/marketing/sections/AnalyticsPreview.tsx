@@ -124,7 +124,7 @@ export function AnalyticsPreview() {
           {/* Content */}
           <div className="relative p-4 sm:p-6">
             {/* Metrics grid */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 mb-5 sm:mb-6">
+            <div className="grid grid-cols-1 min-[380px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 mb-5 sm:mb-6">
               {metrics.map((m, i) => (
                 <div
                   key={m.label}

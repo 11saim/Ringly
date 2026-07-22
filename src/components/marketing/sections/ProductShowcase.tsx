@@ -16,46 +16,36 @@ import {
   Heart,
 } from "lucide-react";
 
-function useCount(target: number, duration: number, active: boolean, decimals = 0) {
-  const [val, setVal] = useState(0);
-  useEffect(() => {
-    if (!active) { setVal(0); return; }
-    const start = performance.now();
-    const tick = (now: number) => {
-      const p = Math.min((now - start) / (duration * 1000), 1);
-      const eased = 1 - Math.pow(1 - p, 3);
-      setVal(Number((eased * target).toFixed(decimals)));
-      if (p < 1) requestAnimationFrame(tick);
-    };
-    requestAnimationFrame(tick);
-  }, [active, target, duration, decimals]);
-  return val;
-}
-
 function useStagger(total: number, active: boolean, delay = 250) {
   const [visible, setVisible] = useState(-1);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   useEffect(() => {
-    if (!active) { timers.current.forEach(clearTimeout); timers.current = []; setVisible(-1); return; }
+    timers.current.forEach(clearTimeout);
+    timers.current = [];
+    if (!active) return;
     for (let i = 0; i < total; i++) {
       timers.current.push(setTimeout(() => setVisible(i), delay + i * delay));
     }
     return () => { timers.current.forEach(clearTimeout); timers.current = []; };
   }, [active, total, delay]);
-  return visible;
+  return active ? visible : -1;
 }
 
 /* ── Booking Flow Card (large 2x2) ── */
 function BookingFlowCard({ active }: { active: boolean }) {
-  const [step, setStep] = useState(-1);
+  const [stepState, setStepState] = useState(-1);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   useEffect(() => {
-    if (!active) { timers.current.forEach(clearTimeout); timers.current = []; setStep(-1); return; }
+    timers.current.forEach(clearTimeout);
+    timers.current = [];
+    if (!active) return;
     const seq = [0, 1200, 2400, 3400, 4200, 5000];
-    seq.forEach((d, i) => { timers.current.push(setTimeout(() => setStep(i), d)); });
+    seq.forEach((d, i) => { timers.current.push(setTimeout(() => setStepState(i), d)); });
     return () => { timers.current.forEach(clearTimeout); timers.current = []; };
   }, [active]);
+
+  const step = active ? stepState : -1;
 
   const steps = [
     { label: "Customer arrives", sub: "Walk-in or online", icon: Users, color: "#6366f1" },
@@ -156,15 +146,19 @@ function BookingFlowCard({ active }: { active: boolean }) {
 
 /* ── Setup Steps Card ── */
 function SetupStepsCard({ active }: { active: boolean }) {
-  const [step, setStep] = useState(-1);
+  const [stepState, setStepState] = useState(-1);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   useEffect(() => {
-    if (!active) { timers.current.forEach(clearTimeout); timers.current = []; setStep(-1); return; }
+    timers.current.forEach(clearTimeout);
+    timers.current = [];
+    if (!active) return;
     const seq = [0, 900, 1800, 2600];
-    seq.forEach((d, i) => { timers.current.push(setTimeout(() => setStep(i), d)); });
+    seq.forEach((d, i) => { timers.current.push(setTimeout(() => setStepState(i), d)); });
     return () => { timers.current.forEach(clearTimeout); timers.current = []; };
   }, [active]);
+
+  const step = active ? stepState : -1;
 
   const steps = [
     { num: "1", label: "Connect your calendar", sub: "Google, iCal, Outlook", color: "#3b82f6" },
@@ -436,15 +430,17 @@ function ActivityFeedCard({ active }: { active: boolean }) {
 
 /* ── 24/7 Coverage Card ── */
 function CoverageCard({ active }: { active: boolean }) {
-  const [activeIdx, setActiveIdx] = useState(-1);
+  const [idxState, setIdxState] = useState(-1);
 
   useEffect(() => {
-    if (!active) { setActiveIdx(-1); return; }
+    if (!active) return;
     let i = 0;
-    const interval = setInterval(() => { setActiveIdx(i); i = (i + 1) % 24; }, 180);
-    const timeout = setTimeout(() => { clearInterval(interval); setActiveIdx(23); }, 4500);
+    const interval = setInterval(() => { setIdxState(i); i = (i + 1) % 24; }, 180);
+    const timeout = setTimeout(() => { clearInterval(interval); setIdxState(23); }, 4500);
     return () => { clearInterval(interval); clearTimeout(timeout); };
   }, [active]);
+
+  const activeIdx = active ? idxState : -1;
 
   return (
     <div className="h-full p-3 flex flex-col justify-center relative overflow-hidden">
@@ -485,15 +481,18 @@ function CoverageCard({ active }: { active: boolean }) {
 
 /* ── Safety / Handoff Card ── */
 function SafetyCard({ active }: { active: boolean }) {
-  const [checked, setChecked] = useState(false);
-  const [pulse, setPulse] = useState(false);
+  const [checkedState, setCheckedState] = useState(false);
+  const [pulseState, setPulseState] = useState(false);
 
   useEffect(() => {
-    if (!active) { setChecked(false); setPulse(false); return; }
-    const t1 = setTimeout(() => setPulse(true), 600);
-    const t2 = setTimeout(() => setChecked(true), 1200);
+    if (!active) return;
+    const t1 = setTimeout(() => setPulseState(true), 600);
+    const t2 = setTimeout(() => setCheckedState(true), 1200);
     return () => { clearTimeout(t1); clearTimeout(t2); };
   }, [active]);
+
+  const checked = active && checkedState;
+  const pulse = active && pulseState;
 
   return (
     <div className="h-full p-3 flex flex-col justify-center relative">

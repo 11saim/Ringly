@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ArrowRight, Clock, Users, Zap, TrendingUp } from "lucide-react";
+import { Clock, Users, Zap, TrendingUp } from "lucide-react";
 
 const transformations = [
   {

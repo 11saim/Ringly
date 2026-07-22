@@ -643,6 +643,21 @@
   border-radius: inherit;
 }
 
+/* Hero 850px breakpoint */
+.hero-center {
+  align-self: flex-start;
+}
+@media (min-width: 850px) {
+  .hero-row {
+    flex-direction: row;
+    gap: 2.5rem;
+    min-height: 540px;
+  }
+  .hero-center {
+    align-self: center;
+  }
+}
+
 /* Dashboard widget animations */
 @keyframes bar-grow {
   from { transform: scaleY(0); }

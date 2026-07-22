@@ -30,8 +30,8 @@ const footerLinks = {
 export function MarketingFooter() {
   return (
     <footer className="relative bg-[#0A0A0A] text-white" role="contentinfo">
-      <div className="mx-auto max-w-7xl px-6 sm:px-8 pt-10 sm:pt-12 pb-6">
-        <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_1fr_1fr_1fr] gap-12 lg:gap-8">
+      <div className="mx-auto max-w-7xl px-4 sm:px-8 pt-10 sm:pt-12 pb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[1.2fr_1fr_1fr_1fr] gap-10 lg:gap-8">
           {/* Brand */}
           <div>
             <Link href="/" className="flex items-center gap-2.5 font-semibold text-xl mb-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/20 rounded-lg" aria-label="Ringly - Home">
