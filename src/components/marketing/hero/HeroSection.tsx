@@ -1,17 +1,9 @@
 "use client";
 
 import { useRef } from "react";
-import { ArrowRight } from "lucide-react";
 import { BackgroundEffects } from "./BackgroundEffects";
 import { PhoneMockup } from "./PhoneMockup";
 import { FlowButton } from "@/components/ui/flow-button";
-import Link from "next/link";
-
-const features = [
-  { icon: "💬", label: "No new number needed" },
-  { icon: "⚡", label: "Set up in minutes" },
-  { icon: "🚀", label: "Free to start" },
-];
 
 export function HeroSection() {
   const sectionRef = useRef<HTMLElement>(null);

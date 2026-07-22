@@ -408,7 +408,7 @@ function StaffView({
 function KanbanView({ list }: { list: Booking[] }) {
   return (
     <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-      {lanes.map((lane, laneIndex) => (
+      {lanes.map((lane) => (
         <div
           key={lane}
           className="min-h-[420px] rounded-xl border border-border bg-card p-3"
