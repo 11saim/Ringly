@@ -14,24 +14,21 @@ export function Header({ onSearchClick }: HeaderProps) {
   return (
     <header
       className={cn(
-        "sticky top-0 z-30 flex h-16 items-center justify-between",
-        "border-b border-border bg-background/80 backdrop-blur-md",
-        "px-8",
+        "sticky top-0 z-30 flex h-[52px] items-center justify-end",
+        "border-b border-border/50 bg-background/80 backdrop-blur-xl",
+        "px-6",
       )}
     >
-      {/* Left: spacer (page title moved to content area) */}
-      <div className="flex h-full items-center" />
-
       {/* Right: Search + Notifications + Theme + Avatar */}
-      <div className="flex h-full items-center gap-1">
+      <div className="flex h-full items-center gap-0.5">
         <SearchTrigger onClick={onSearchClick} />
 
-        <div className="h-4 w-px bg-border mx-1" />
+        <div className="h-4 w-px bg-border/40 mx-2" />
 
         <NotificationButton />
         <ThemeToggle />
 
-        <div className="h-4 w-px bg-border mx-1" />
+        <div className="h-4 w-px bg-border/40 mx-2" />
 
         <UserMenu />
       </div>

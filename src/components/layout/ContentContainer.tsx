@@ -14,7 +14,7 @@ export function ContentContainer({
     <div
       className={cn(
         "w-full",
-        "px-6 pt-8 pb-6 sm:px-10 sm:pt-10 sm:pb-8 md:px-10 md:pt-10 md:pb-8",
+        "px-6 pt-6 pb-6 sm:px-8 sm:pt-8 sm:pb-8 md:px-10 md:pt-8 md:pb-8",
         className,
       )}
       {...props}

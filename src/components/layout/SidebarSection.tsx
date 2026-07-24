@@ -8,18 +8,18 @@ interface SidebarSectionProps {
 
 export function SidebarSection({ label, children, className }: SidebarSectionProps) {
   return (
-    <div className={cn("pt-7 pb-1", className)}>
-      <div className="px-3 pb-2.5">
+    <div className={cn("pt-5 pb-0.5", className)}>
+      <div className="px-2.5 pb-1.5">
         <span
           className={cn(
-            "text-[10px] font-semibold uppercase tracking-[0.08em]",
-            "text-muted-foreground/35",
+            "text-[10px] font-medium uppercase tracking-[0.06em]",
+            "text-muted-foreground/40",
           )}
         >
           {label}
         </span>
       </div>
-      <div className="space-y-0.5">
+      <div className="space-y-px">
         {children}
       </div>
     </div>

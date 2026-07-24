@@ -14,21 +14,22 @@ export function SearchTrigger({ onClick, className }: SearchTriggerProps) {
       type="button"
       onClick={onClick}
       className={cn(
-        "flex items-center gap-2 rounded-md px-2 py-1 text-[13px]",
-        "text-muted-foreground/60",
-        "transition-all duration-150 ease-out",
-        "hover:text-foreground",
+        "flex items-center gap-2.5 rounded-[10px] px-3 py-1.5 text-[13px]",
+        "text-muted-foreground/50",
+        "border border-transparent",
+        "transition-all duration-200 ease-out",
+        "hover:text-foreground/70 hover:bg-hover-bg hover:border-border/40",
         "focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2",
         className,
       )}
       aria-label="Search (Ctrl+K)"
     >
-      <Search size={14} strokeWidth={1.8} className="shrink-0" />
+      <Search size={15} strokeWidth={1.5} className="shrink-0 opacity-60" />
       <span className="opacity-60">Search...</span>
       <kbd
         className={cn(
-          "ml-1 flex items-center gap-0.5 rounded border border-border/50",
-          "bg-muted/50 px-1 py-px font-mono text-[10px] font-medium",
+          "ml-2 flex items-center gap-0.5 rounded-md border border-border/30",
+          "bg-muted/40 px-1.5 py-0.5 font-mono text-[10px] font-medium",
           "text-muted-foreground/35",
         )}
       >

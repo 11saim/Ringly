@@ -27,8 +27,8 @@ export function UserMenu() {
         type="button"
         onClick={() => setOpen(!open)}
         className={cn(
-          "flex items-center rounded-md p-1",
-          "transition-colors duration-150",
+          "flex items-center rounded-full p-0.5",
+          "transition-all duration-200",
           "hover:bg-hover-bg",
           "focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2",
         )}
@@ -51,51 +51,55 @@ export function UserMenu() {
           />
           <div
             className={cn(
-              "absolute right-0 top-full z-20 mt-1 w-52 rounded-md",
-              "border border-border bg-card py-1",
-              "shadow-[0_4px_16px_rgba(0,0,0,0.06)]",
+              "absolute right-0 top-full z-20 mt-2 w-52 rounded-[16px]",
+              "border border-border/50 bg-card py-1",
+              "shadow-[var(--shadow-dropdown)]",
               "animate-dropdown-in",
             )}
           >
-            <div className="px-3 py-2">
-              <div className="text-[13px] font-medium text-foreground leading-tight">Ali Nagi</div>
-              <div className="text-[11px] text-muted-foreground leading-tight mt-px">ali@bloomstudio.com</div>
+            <div className="px-3.5 py-3">
+              <div className="text-[13px] font-semibold text-foreground leading-tight">Ali Nagi</div>
+              <div className="text-[11px] text-muted-foreground/50 leading-tight mt-0.5">ali@bloomstudio.com</div>
             </div>
-            <div className="border-t border-border" />
-            <button
-              type="button"
-              className={cn(
-                "flex w-full items-center gap-2 px-3 py-2 text-[13px] text-muted-foreground",
-                "transition-colors duration-150",
-                "hover:bg-hover-bg hover:text-foreground",
-              )}
-            >
-              <User size={14} />
-              <span>Account</span>
-            </button>
-            <button
-              type="button"
-              className={cn(
-                "flex w-full items-center gap-2 px-3 py-2 text-[13px] text-muted-foreground",
-                "transition-colors duration-150",
-                "hover:bg-hover-bg hover:text-foreground",
-              )}
-            >
-              <Settings size={14} />
-              <span>Settings</span>
-            </button>
-            <div className="border-t border-border" />
-            <button
-              type="button"
-              className={cn(
-                "flex w-full items-center gap-2 px-3 py-2 text-[13px] text-muted-foreground",
-                "transition-colors duration-150",
-                "hover:bg-hover-bg hover:text-foreground",
-              )}
-            >
-              <LogOut size={14} />
-              <span>Log out</span>
-            </button>
+            <div className="h-px bg-border/40 mx-3" />
+            <div className="py-1">
+              <button
+                type="button"
+                className={cn(
+                  "flex w-full items-center gap-2.5 px-3.5 py-2 text-[13px] text-muted-foreground",
+                  "transition-all duration-150",
+                  "hover:bg-hover-bg hover:text-foreground",
+                )}
+              >
+                <User size={14} strokeWidth={1.5} />
+                <span>Account</span>
+              </button>
+              <button
+                type="button"
+                className={cn(
+                  "flex w-full items-center gap-2.5 px-3.5 py-2 text-[13px] text-muted-foreground",
+                  "transition-all duration-150",
+                  "hover:bg-hover-bg hover:text-foreground",
+                )}
+              >
+                <Settings size={14} strokeWidth={1.5} />
+                <span>Settings</span>
+              </button>
+            </div>
+            <div className="h-px bg-border/40 mx-3" />
+            <div className="py-1">
+              <button
+                type="button"
+                className={cn(
+                  "flex w-full items-center gap-2.5 px-3.5 py-2 text-[13px] text-muted-foreground",
+                  "transition-all duration-150",
+                  "hover:bg-hover-bg hover:text-foreground",
+                )}
+              >
+                <LogOut size={14} strokeWidth={1.5} />
+                <span>Log out</span>
+              </button>
+            </div>
           </div>
         </>
       )}

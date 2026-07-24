@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
-import { ChevronsLeft, LogOut } from "lucide-react";
+import { LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useSidebarCollapsed } from "@/hooks/use-sidebar-store";
@@ -55,48 +55,26 @@ export function Sidebar() {
 
   const sidebarContent = (
     <div className="flex h-full flex-col bg-sidebar-bg border-r border-sidebar-border">
-      {/* Logo + Collapse */}
-      <div className="flex items-center justify-between px-5 py-5">
+      {/* Logo */}
+      <div className="flex items-center px-5 pt-5 pb-4">
         <RinglyLogo size="md" collapsed={collapsed} />
-        {!isMobile && (
-          <button
-            type="button"
-            onClick={() => setCollapsed(!collapsed)}
-            className={cn(
-              "flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground",
-              "transition-all duration-150 ease-out",
-              "opacity-0 group-hover/sidebar:opacity-100",
-              "hover:bg-hover-bg hover:text-foreground",
-              "focus-visible:outline-2 focus-visible:outline-primary-light focus-visible:outline-offset-2",
-            )}
-            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          >
-            <ChevronsLeft
-              size={16}
-              className={cn(
-                "transition-transform duration-200",
-                collapsed && "rotate-180",
-              )}
-            />
-          </button>
-        )}
       </div>
 
       {/* Workspace Selector */}
       {!collapsed && (
-        <div className="px-4 pb-4">
+        <div className="px-3 pb-3">
           <WorkspaceSwitcher collapsed={collapsed} />
         </div>
       )}
 
       {/* Navigation */}
       <nav className={cn(
-        "flex-1 overflow-y-auto",
+        "flex-1 overflow-y-auto px-3",
         "scrollbar-hidden",
-        collapsed ? "px-3 py-2" : "px-4 py-1",
+        collapsed ? "py-1" : "py-1",
       )}>
         {collapsed ? (
-          <div className="flex flex-col items-center gap-1">
+          <div className="flex flex-col items-center gap-0.5">
             {navSections.map((section) =>
               section.items.map((item) => (
                 <SidebarItem
@@ -112,12 +90,12 @@ export function Sidebar() {
           <div className="space-y-5">
             {navSections.map((section) => (
               <div key={section.id}>
-                <div className="mb-1.5 px-3">
-                  <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/60">
+                <div className="mb-1 px-2">
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/50">
                     {section.label}
                   </span>
                 </div>
-                <div className="space-y-0.5">
+                <div className="space-y-px">
                   {section.items.map((item) => (
                     <SidebarItem
                       key={item.id}
@@ -135,7 +113,7 @@ export function Sidebar() {
 
       {/* Bottom */}
       {!collapsed && (
-        <div className="border-t border-sidebar-border px-4 py-3">
+        <div className="border-t border-sidebar-border mx-3 my-2 pt-2">
           <SidebarItem
             item={{
               id: "logout",
@@ -160,9 +138,10 @@ export function Sidebar() {
           onClick={() => setMobileOpen(true)}
           className={cn(
             "fixed top-3 left-3 z-50 grid h-10 w-10 place-items-center",
-            "rounded-lg border border-border bg-card text-foreground shadow-sm",
-            "transition-colors duration-150",
-            "hover:bg-hover-bg",
+            "rounded-[12px] border border-border bg-card text-foreground",
+            "shadow-[var(--shadow-card)]",
+            "transition-all duration-200",
+            "hover:bg-hover-bg hover:shadow-[var(--shadow-card-hover)]",
           )}
           aria-label="Open navigation"
         >
@@ -201,7 +180,7 @@ export function Sidebar() {
         "fixed inset-y-0 left-0 z-40 flex h-screen flex-col group/sidebar",
         "sidebar-transition",
       )}
-      style={{ width: collapsed ? 80 : 296 }}
+      style={{ width: collapsed ? 72 : 280 }}
     >
       {sidebarContent}
     </aside>

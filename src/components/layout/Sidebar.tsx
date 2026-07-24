@@ -37,13 +37,13 @@ export function Sidebar() {
   const sidebarContent = (
     <div className="flex h-full flex-col bg-sidebar-bg border-r border-sidebar-border">
       {/* Logo */}
-      <div className="px-5 pt-5 pb-6">
+      <div className="px-4 pt-4 pb-4">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-[7px] bg-accent text-white">
-            <span className="text-[12px] font-bold leading-none">R</span>
+          <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-accent text-white">
+            <span className="text-[11px] font-bold leading-none">R</span>
           </div>
           <div className="flex flex-col">
-            <span className="text-[14px] font-semibold tracking-[-0.01em] text-foreground leading-none">
+            <span className="text-[13px] font-semibold tracking-[-0.01em] text-foreground leading-none">
               Ringly
             </span>
             <span className="text-[10px] text-muted-foreground/40 leading-none mt-1">
@@ -54,9 +54,9 @@ export function Sidebar() {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto px-3 scrollbar-hidden">
+      <nav className="flex-1 overflow-y-auto px-2.5 scrollbar-hidden">
         {navSections.map((section, i) => (
-          <SidebarSection key={section.id} label={section.label} className={i === 0 ? "pt-1" : undefined}>
+          <SidebarSection key={section.id} label={section.label} className={i === 0 ? "pt-0.5" : undefined}>
             {section.items.map((item) => (
               <SidebarItem
                 key={item.id}
@@ -79,7 +79,7 @@ export function Sidebar() {
           onClick={() => setMobileOpen(true)}
           className={cn(
             "fixed top-3 left-3 z-50 grid h-10 w-10 place-items-center",
-            "rounded-lg border border-border bg-card text-foreground shadow-sm",
+            "rounded-[12px] border border-border bg-card text-foreground shadow-sm",
             "transition-colors duration-150",
             "hover:bg-hover-bg",
             "focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2",

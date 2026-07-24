@@ -20,9 +20,7 @@ export function ThemeToggle() {
   if (!mounted) {
     return (
       <div
-        className={cn(
-          "grid h-9 w-9 shrink-0 place-items-center rounded-lg text-muted-foreground",
-        )}
+        className="grid h-8 w-8 shrink-0 place-items-center rounded-[10px]"
         aria-label="Toggle theme"
       />
     );
@@ -36,10 +34,10 @@ export function ThemeToggle() {
       type="button"
       onClick={() => setTheme(isDark ? "light" : "dark")}
       className={cn(
-        "grid h-9 w-9 shrink-0 place-items-center rounded-lg text-muted-foreground",
-        "transition-colors duration-150",
+        "grid h-8 w-8 shrink-0 place-items-center rounded-[10px] text-muted-foreground/50",
+        "transition-all duration-200",
         "hover:bg-hover-bg hover:text-foreground",
-        "focus-visible:outline-2 focus-visible:outline-primary-light focus-visible:outline-offset-2",
+        "focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2",
       )}
       aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
     >
@@ -50,7 +48,7 @@ export function ThemeToggle() {
           "absolute",
         )}
       >
-        <Moon size={16} />
+        <Moon size={16} strokeWidth={1.5} />
       </div>
       <div
         className={cn(
@@ -58,7 +56,7 @@ export function ThemeToggle() {
           !isDark ? "rotate-0 scale-100 opacity-100" : "-rotate-90 scale-90 opacity-0",
         )}
       >
-        <Sun size={16} />
+        <Sun size={16} strokeWidth={1.5} />
       </div>
     </button>
   );

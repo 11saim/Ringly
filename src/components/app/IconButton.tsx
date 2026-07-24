@@ -17,7 +17,7 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(
         ref={ref}
         type="button"
         className={cn(
-          "relative grid h-9 w-9 shrink-0 place-items-center rounded-lg text-muted-foreground",
+          "relative grid h-9 w-9 shrink-0 place-items-center rounded-[12px] text-muted-foreground",
           "hover:bg-hover hover:text-foreground transition-colors",
           active && "bg-hover text-foreground",
           className,

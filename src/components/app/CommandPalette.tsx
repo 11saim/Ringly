@@ -128,12 +128,12 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                     type="button"
                     onClick={() => navigate(`/${action.id}`)}
                     className={cn(
-                      "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm",
+                      "flex w-full items-center gap-3 rounded-[12px] px-3 py-2.5 text-left text-sm",
                       "transition-colors duration-150",
                       "hover:bg-hover-bg",
                     )}
                   >
-                    <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-muted text-muted-foreground">
+                    <span className="grid h-8 w-8 shrink-0 place-items-center rounded-[12px] bg-muted text-muted-foreground">
                       <action.icon size={15} />
                     </span>
                     <span className="text-foreground">{action.label}</span>
@@ -159,12 +159,12 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                       type="button"
                       onClick={() => navigate(item.href)}
                       className={cn(
-                        "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm",
+                        "flex w-full items-center gap-3 rounded-[12px] px-3 py-2.5 text-left text-sm",
                         "transition-colors duration-150",
                         "hover:bg-hover-bg",
                       )}
                     >
-                      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-muted text-muted-foreground">
+                      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-[12px] bg-muted text-muted-foreground">
                         <Icon size={15} />
                       </span>
                       <span className="text-foreground">{item.label}</span>
