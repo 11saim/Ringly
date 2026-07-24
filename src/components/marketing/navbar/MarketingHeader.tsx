@@ -180,17 +180,17 @@ export function MarketingHeader() {
                 ))}
               </nav>
               <div className="border-t border-black/[0.04] p-3 flex flex-col gap-2">
-                <div className="moving-border-wrapper w-full">
+                <div className="w-full">
                   <Link
                     href="/login"
                     onClick={closeMobile}
-                    className="block w-full px-5 py-2.5 rounded-full bg-white text-[#0F172A] text-[13px] font-semibold text-center transition-all duration-300 hover:shadow-[0_4px_16px_rgba(34,197,94,0.12)] animate-dropdown-link"
+                    className="block w-full px-5 py-2.5 border border-black/[0.08] rounded-full bg-white text-[#0F172A] text-[13px] font-semibold text-center transition-all duration-300 hover:shadow-[0_4px_16px_rgba(34,197,94,0.12)] animate-dropdown-link"
                     style={{ animationDelay: `${navLinks.length * 40}ms` }}
                   >
                     Sign In
                   </Link>
                 </div>
-                <div className="moving-border-wrapper w-full">
+                <div className="w-full">
                   <Link
                     href="/signup"
                     onClick={closeMobile}

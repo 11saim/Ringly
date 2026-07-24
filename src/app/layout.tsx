@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Toaster } from "sonner";
+import { ThemeProvider } from "next-themes";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import "./globals.css";
 
@@ -90,10 +91,12 @@ export default function RootLayout({
         />
       </head>
       <body>
-        <TooltipProvider>
-          {children}
-          <Toaster />
-        </TooltipProvider>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+          <TooltipProvider>
+            {children}
+            <Toaster />
+          </TooltipProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

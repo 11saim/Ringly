@@ -1,49 +1,72 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
-import { Sidebar, MobileNav } from "./IconRailNav";
+import { useState, useEffect } from "react";
+import { Container } from "./Container";
+import { Header } from "./Header";
+import { Sidebar } from "./Sidebar";
 import { CommandPalette } from "./CommandPalette";
-import { Search } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { useSidebarCollapsed } from "@/hooks/use-sidebar-store";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { cn } from "@/lib/utils";
 
-export function AppShell({ title, subtitle, children, actions }: { title: string; subtitle?: string; children: ReactNode; actions?: ReactNode }) {
+interface AppShellProps {
+  title?: string;
+  subtitle?: string;
+  children: React.ReactNode;
+  actions?: React.ReactNode;
+}
+
+export function AppShell({
+  title,
+  children,
+  actions,
+}: AppShellProps) {
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [collapsed] = useSidebarCollapsed();
+  const isMobile = useIsMobile();
 
   useEffect(() => {
-    const on = (e: KeyboardEvent) => {
+    const onKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
         setPaletteOpen((o) => !o);
       }
     };
-    window.addEventListener("keydown", on);
-    return () => window.removeEventListener("keydown", on);
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
+
+  const sidebarWidth = isMobile ? 0 : collapsed ? 80 : 296;
 
   return (
     <div className="min-h-screen bg-background text-foreground">
       <Sidebar />
 
-      <div className="md:ml-[220px] lg:ml-[240px] pb-20 md:pb-0">
-        <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-border bg-background/80 backdrop-blur-sm px-4 sm:px-6">
-          <div className="md:hidden w-10" />
-          <div className="min-w-0">
-            <div className="text-sm font-semibold truncate">{title}</div>
-            {subtitle && <div className="text-xs text-muted-foreground truncate">{subtitle}</div>}
-          </div>
-          <div className="ml-auto flex items-center gap-2">
-            {actions}
-            <Button variant="outline" size="sm" onClick={() => setPaletteOpen(true)} className="gap-2 text-muted-foreground hidden sm:flex">
-              <Search size={14} />
-              <span className="hidden lg:inline">Search</span>
-              <kbd className="ml-1 hidden lg:inline rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[10px]">⌘K</kbd>
-            </Button>
-          </div>
-        </header>
-        <main className="p-4 sm:p-6 md:p-8 max-w-[1400px] mx-auto">{children}</main>
-      </div>
+      <main
+        className={cn(
+          "relative flex-1 transition-all duration-200 ease-out",
+          !isMobile && "min-h-screen",
+        )}
+        style={{ marginLeft: sidebarWidth }}
+      >
+        <Header
+          title={title}
+          onSearchClick={() => setPaletteOpen(true)}
+        />
 
-      <MobileNav />
+        <Container maxWidth="7xl" padding="lg">
+          {actions && (
+            <div className="mb-8 flex items-center justify-between">
+              {actions}
+            </div>
+          )}
+
+          <div className="animate-fade-in">
+            {children}
+          </div>
+        </Container>
+      </main>
+
       <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
     </div>
   );

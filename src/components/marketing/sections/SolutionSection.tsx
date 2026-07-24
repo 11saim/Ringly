@@ -108,7 +108,7 @@ export function SolutionSection() {
           }}
         >
           {/* Step dots */}
-          <div className="flex items-center justify-between gap-1 sm:gap-2 mb-8 sm:mb-12 max-w-full overflow-x-auto py-1">
+          <div className="flex items-center px-5 justify-between gap-1 sm:gap-2 mb-8 sm:mb-12 max-w-full overflow-x-auto py-1">
             {steps.map((step, i) => (
               <button
                 key={step.num}
