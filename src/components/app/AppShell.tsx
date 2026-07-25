@@ -14,12 +14,14 @@ interface AppShellProps {
   subtitle?: string;
   children: React.ReactNode;
   actions?: React.ReactNode;
+  fullWidth?: boolean;
 }
 
 export function AppShell({
   title,
   children,
   actions,
+  fullWidth = false,
 }: AppShellProps) {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [collapsed] = useSidebarCollapsed();
@@ -54,17 +56,27 @@ export function AppShell({
           onSearchClick={() => setPaletteOpen(true)}
         />
 
-        <Container maxWidth="7xl" padding="lg">
-          {actions && (
-            <div className="mb-8 flex items-center justify-between">
-              {actions}
-            </div>
-          )}
-
-          <div className="animate-fade-in">
+        {fullWidth ? (
+          <div className="px-8 pb-8 pt-6 animate-fade-in">
+            {actions && (
+              <div className="mb-8 flex items-center justify-between">
+                {actions}
+              </div>
+            )}
             {children}
           </div>
-        </Container>
+        ) : (
+          <Container maxWidth="7xl" padding="lg">
+            {actions && (
+              <div className="mb-8 flex items-center justify-between">
+                {actions}
+              </div>
+            )}
+            <div className="animate-fade-in">
+              {children}
+            </div>
+          </Container>
+        )}
       </main>
 
       <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />

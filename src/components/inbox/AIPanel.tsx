@@ -3,66 +3,72 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Sparkles, Brain, TrendingUp, Globe,
-  ChevronRight, RotateCcw, AlignLeft,
-  User, CreditCard, Package, Send, Zap,
-  Star, Shield, Calendar,
+  Sparkles, Brain, ChevronDown,
+  RotateCcw, Send, User, CreditCard, Package,
+  Calendar, ExternalLink,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { conversations, aiSuggestions, recommendedActions } from "@/lib/inbox-data";
+import { conversations } from "@/lib/inbox-data";
 
 interface AIPanelProps {
   conversationId: string | null;
 }
 
+type TabType = "copilot" | "insights";
+
 export function AIPanel({ conversationId }: AIPanelProps) {
-  const [activeTab, setActiveTab] = useState<"insights" | "suggestions" | "actions">("insights");
+  const [activeTab, setActiveTab] = useState<TabType>("copilot");
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
   const conversation = conversations.find((c) => c.id === conversationId);
+
+  const toggleSection = (id: string) => {
+    setCollapsedSections((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
 
   if (!conversation) {
     return (
-      <div className="flex flex-col items-center justify-center h-full text-center px-6">
-        <div className="flex h-14 w-14 items-center justify-center rounded-[16px] bg-primary/[0.06] mb-4">
-          <Sparkles size={22} strokeWidth={1.5} className="text-primary-light/60" />
+      <div className="flex flex-col items-center justify-center h-full text-center px-6 bg-background">
+        <div className="flex flex-col items-center">
+          <div className="flex h-14 w-14 items-center justify-center rounded-[18px] bg-muted mb-4">
+            <Sparkles size={22} strokeWidth={1.2} className="text-muted-foreground/30" />
+          </div>
+          <h3 className="text-[14px] font-semibold text-foreground mb-1">AI Assistant</h3>
+          <p className="text-[12px] text-muted-foreground/45 leading-relaxed max-w-[200px]">
+            Select a conversation to see AI insights and suggestions.
+          </p>
         </div>
-        <h3 className="text-[14px] font-semibold text-foreground mb-1">AI Assistant</h3>
-        <p className="text-[12px] text-muted-foreground/45 leading-relaxed max-w-[200px]">
-          Select a conversation to see AI insights, suggestions, and recommended actions.
-        </p>
       </div>
     );
   }
 
   const sentimentColor = {
-    positive: "text-success",
+    positive: "text-accent",
     neutral: "text-muted-foreground",
     negative: "text-destructive",
   }[conversation.sentiment];
 
-  const sentimentBg = {
-    positive: "bg-success/8",
-    neutral: "bg-muted",
-    negative: "bg-destructive/8",
-  }[conversation.sentiment];
-
   return (
-    <div className="flex flex-col h-full overflow-hidden">
+    <div className="flex flex-col h-full overflow-hidden bg-background">
       {/* Tabs */}
-      <div className="flex border-b border-border/30 px-4">
-        {(["insights", "suggestions", "actions"] as const).map((tab) => (
+      <div className="flex border-b border-border/40 px-3 bg-card/40 shrink-0">
+        {([
+          { id: "copilot" as TabType, label: "Copilot", icon: Sparkles },
+          { id: "insights" as TabType, label: "Insights", icon: Brain },
+        ]).map(({ id, label, icon: Icon }) => (
           <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
+            key={id}
+            onClick={() => setActiveTab(id)}
             className={cn(
-              "relative px-3 py-3 text-[12px] font-medium capitalize transition-colors",
-              activeTab === tab ? "text-foreground" : "text-muted-foreground/40 hover:text-muted-foreground",
+              "relative flex items-center gap-1.5 px-4 py-3 text-[11px] font-medium transition-colors duration-150",
+              activeTab === id ? "text-foreground" : "text-muted-foreground/40 hover:text-muted-foreground",
             )}
           >
-            {tab}
-            {activeTab === tab && (
+            <Icon size={12} strokeWidth={1.5} />
+            {label}
+            {activeTab === id && (
               <motion.div
                 layoutId="ai-tab"
-                className="absolute bottom-0 left-0 right-0 h-0.5 bg-foreground rounded-full"
+                className="absolute bottom-0 left-0 right-0 h-[2px] bg-accent rounded-full"
               />
             )}
           </button>
@@ -70,211 +76,189 @@ export function AIPanel({ conversationId }: AIPanelProps) {
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto scrollbar-thin">
+      <div className="flex-1 overflow-y-auto scrollbar-premium">
         <AnimatePresence mode="wait">
+          {/* COPILOT TAB */}
+          {activeTab === "copilot" && (
+            <motion.div
+              key="copilot"
+              initial={{ opacity: 0, x: 6 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -6 }}
+              transition={{ duration: 0.15 }}
+              className="p-4 space-y-4"
+            >
+              {/* Suggested Reply */}
+              <div className="rounded-[14px] border border-border/40 bg-card p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-5 w-5 items-center justify-center rounded-[6px] bg-primary-light/10">
+                    <Sparkles size={10} strokeWidth={1.5} className="text-primary-light" />
+                  </div>
+                  <span className="text-[12px] font-semibold text-foreground">Suggested Reply</span>
+                </div>
+                <p className="text-[12px] text-foreground/60 leading-relaxed bg-muted/30 rounded-[10px] p-3 border border-border/15">
+                  Hi Ahmed! Your appointment is confirmed for tomorrow at 10:00 AM for Balayage + Deep Conditioning. Total: $480. See you there!
+                </p>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    className="flex items-center gap-1.5 rounded-[8px] bg-accent px-3 py-1.5 text-[11px] font-semibold text-white transition-all duration-150 hover:bg-accent-hover"
+                  >
+                    <Send size={10} strokeWidth={2} />
+                    Apply
+                  </button>
+                  <button
+                    className="flex items-center gap-1.5 rounded-[8px] bg-muted px-3 py-1.5 text-[11px] font-medium text-foreground/60 transition-all duration-150 hover:bg-muted/80 border border-border/20"
+                  >
+                    <RotateCcw size={10} strokeWidth={1.5} />
+                    Regenerate
+                  </button>
+                </div>
+              </div>
+
+              {/* Intent & Sentiment */}
+              <div className="rounded-[14px] border border-border/30 bg-card overflow-hidden">
+                <div className="grid grid-cols-2 divide-x divide-border/20">
+                  <div className="p-3">
+                    <span className="text-[9px] text-muted-foreground/50 font-medium uppercase tracking-wider block mb-1">Intent</span>
+                    <p className="text-[12px] font-semibold text-foreground truncate">{conversation.intent}</p>
+                  </div>
+                  <div className="p-3">
+                    <span className="text-[9px] text-muted-foreground/50 font-medium uppercase tracking-wider block mb-1">Sentiment</span>
+                    <p className={cn("text-[12px] font-semibold capitalize", sentimentColor)}>
+                      {conversation.sentiment}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Quick Actions */}
+              <div className="space-y-2">
+                <span className="text-[10px] font-semibold text-muted-foreground/40 uppercase tracking-wider">Quick Actions</span>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {[
+                    { icon: ExternalLink, label: "Open KB", color: "text-info", bg: "bg-info/8" },
+                    { icon: User, label: "Assign Human", color: "text-amber-500", bg: "bg-amber-500/8" },
+                  ].map(({ icon: Icon, label, color, bg }) => (
+                    <button
+                      key={label}
+                      className={cn(
+                        "flex items-center gap-2 rounded-[10px] border border-border/30 bg-card px-3 py-2.5 text-left transition-all duration-150",
+                        "hover:border-border/50 hover:bg-hover-bg/50",
+                      )}
+                    >
+                      <div className={cn("flex h-6 w-6 items-center justify-center rounded-[6px]", bg)}>
+                        <Icon size={12} strokeWidth={1.5} className={color} />
+                      </div>
+                      <span className="text-[11px] font-medium text-foreground/70">{label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {/* INSIGHTS TAB */}
           {activeTab === "insights" && (
             <motion.div
               key="insights"
-              initial={{ opacity: 0, x: 8 }}
+              initial={{ opacity: 0, x: 6 }}
               animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -8 }}
-              transition={{ duration: 0.2 }}
-              className="p-4 space-y-4"
+              exit={{ opacity: 0, x: -6 }}
+              transition={{ duration: 0.15 }}
+              className="p-4 space-y-3"
             >
-              {/* Customer Summary */}
-              <div>
-                <h4 className="text-[11px] font-semibold text-muted-foreground/50 uppercase tracking-wider mb-3">Customer Summary</h4>
-                <div className="space-y-2.5">
-                  <InfoRow icon={Brain} label="Sentiment" value={
-                    <span className={cn("px-2 py-0.5 rounded-full text-[10px] font-semibold capitalize", sentimentBg, sentimentColor)}>
-                      {conversation.sentiment}
-                    </span>
-                  } />
-                  <InfoRow icon={Zap} label="Intent" value={<span className="text-[12px] font-medium text-foreground">{conversation.intent}</span>} />
-                  <InfoRow icon={Globe} label="Language" value={<span className="text-[12px] text-foreground/70">{conversation.customer.language}</span>} />
-                  <InfoRow icon={TrendingUp} label="Confidence" value={
-                    <div className="flex items-center gap-2">
-                      <div className="h-1.5 w-16 rounded-full bg-muted overflow-hidden">
-                        <motion.div
-                          initial={{ width: 0 }}
-                          animate={{ width: "88%" }}
-                          transition={{ duration: 0.8, delay: 0.2 }}
-                          className="h-full rounded-full bg-primary-light"
-                        />
-                      </div>
-                      <span className="text-[11px] font-medium text-foreground/70">88%</span>
-                    </div>
-                  } />
+              {/* Customer Info */}
+              <CollapsibleSection
+                title="Customer Info"
+                icon={User}
+                isCollapsed={collapsedSections["info"]}
+                onToggle={() => toggleSection("info")}
+              >
+                <div className="space-y-2">
+                  <InfoRow label="Language" value={<span className="text-[12px] text-foreground/70">{conversation.customer.language}</span>} />
+                  <InfoRow label="Response Time" value={<span className="text-[12px] text-foreground/70">{conversation.customer.responseTime}</span>} />
+                  <InfoRow label="Visits" value={<span className="text-[12px] font-medium text-foreground">{conversation.customer.visitCount}</span>} />
+                  <InfoRow label="Total Spent" value={<span className="text-[12px] font-semibold text-foreground">${conversation.customer.totalSpent.toLocaleString()}</span>} />
                 </div>
-              </div>
+              </CollapsibleSection>
 
               {/* Purchase History */}
-              <div>
-                <h4 className="text-[11px] font-semibold text-muted-foreground/50 uppercase tracking-wider mb-3">Purchase History</h4>
+              <CollapsibleSection
+                title="Purchase History"
+                icon={CreditCard}
+                isCollapsed={collapsedSections["purchases"]}
+                onToggle={() => toggleSection("purchases")}
+              >
                 <div className="space-y-1.5">
                   {conversation.customer.purchaseHistory.map((p, i) => (
-                    <div key={i} className="flex items-center justify-between rounded-[8px] px-3 py-2 bg-muted/40">
-                      <div>
-                        <p className="text-[12px] font-medium text-foreground">{p.item}</p>
-                        <p className="text-[10px] text-muted-foreground/40">{p.date}</p>
+                    <div
+                      key={i}
+                      className="flex items-center justify-between rounded-[10px] px-3 py-2 bg-muted/30 hover:bg-muted/50 transition-colors duration-150"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <div className="flex h-7 w-7 items-center justify-center rounded-[8px] bg-accent/8">
+                          <Package size={11} strokeWidth={1.5} className="text-accent" />
+                        </div>
+                        <div>
+                          <p className="text-[12px] font-medium text-foreground">{p.item}</p>
+                          <p className="text-[10px] text-muted-foreground/40">{p.date}</p>
+                        </div>
                       </div>
-                      <span className="text-[12px] font-semibold text-foreground tabular-nums">${p.amount}</span>
+                      <div className="text-right">
+                        <p className="text-[12px] font-semibold text-foreground tabular-nums">${p.amount}</p>
+                        <p className={cn(
+                          "text-[9px] font-medium capitalize",
+                          p.status === "paid" ? "text-accent" : p.status === "refunded" ? "text-destructive" : "text-amber-500",
+                        )}>
+                          {p.status}
+                        </p>
+                      </div>
                     </div>
                   ))}
                   {conversation.customer.purchaseHistory.length === 0 && (
-                    <p className="text-[11px] text-muted-foreground/40 py-2">No purchases yet</p>
+                    <EmptyState icon={CreditCard} message="No purchases yet" />
                   )}
                 </div>
-              </div>
+              </CollapsibleSection>
 
               {/* Previous Bookings */}
-              <div>
-                <h4 className="text-[11px] font-semibold text-muted-foreground/50 uppercase tracking-wider mb-3">Previous Bookings</h4>
+              <CollapsibleSection
+                title="Previous Bookings"
+                icon={Calendar}
+                isCollapsed={collapsedSections["bookings"]}
+                onToggle={() => toggleSection("bookings")}
+              >
                 <div className="space-y-1.5">
                   {conversation.customer.previousBookings.map((b, i) => (
-                    <div key={i} className="flex items-center justify-between rounded-[8px] px-3 py-2 bg-muted/40">
-                      <div>
-                        <p className="text-[12px] font-medium text-foreground">{b.service}</p>
-                        <p className="text-[10px] text-muted-foreground/40">{b.date}</p>
+                    <div
+                      key={i}
+                      className="flex items-center justify-between rounded-[10px] px-3 py-2 bg-muted/30 hover:bg-muted/50 transition-colors duration-150"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <div className="flex h-7 w-7 items-center justify-center rounded-[8px] bg-primary-light/8">
+                          <Calendar size={11} strokeWidth={1.5} className="text-primary-light" />
+                        </div>
+                        <div>
+                          <p className="text-[12px] font-medium text-foreground">{b.service}</p>
+                          <p className="text-[10px] text-muted-foreground/40">{b.date}</p>
+                        </div>
                       </div>
-                      <span className="text-[10px] font-medium text-success capitalize">{b.status}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] font-medium text-foreground/60 tabular-nums">${b.price}</span>
+                        <span className={cn(
+                          "text-[9px] font-semibold capitalize px-1.5 py-0.5 rounded-full",
+                          b.status === "completed" ? "bg-accent/10 text-accent" : "bg-muted text-muted-foreground/50",
+                        )}>
+                          {b.status}
+                        </span>
+                      </div>
                     </div>
                   ))}
                   {conversation.customer.previousBookings.length === 0 && (
-                    <p className="text-[11px] text-muted-foreground/40 py-2">No previous bookings</p>
+                    <EmptyState icon={Calendar} message="No previous bookings" />
                   )}
                 </div>
-              </div>
-
-              {/* Conversation Insights */}
-              <div>
-                <h4 className="text-[11px] font-semibold text-muted-foreground/50 uppercase tracking-wider mb-3">Conversation Insights</h4>
-                <div className="grid grid-cols-2 gap-2">
-                  <InsightCard label="AI Confidence" value="88%" icon={Brain} color="text-primary-light" />
-                  <InsightCard label="Satisfaction" value="4.2/5" icon={Star} color="text-accent-amber" />
-                  <InsightCard label="Lifetime Value" value={`$${conversation.customer.lifetimeValue.toLocaleString()}`} icon={TrendingUp} color="text-success" />
-                  <InsightCard label="Risk Score" value="Low" icon={Shield} color="text-success" />
-                </div>
-              </div>
-            </motion.div>
-          )}
-
-          {activeTab === "suggestions" && (
-            <motion.div
-              key="suggestions"
-              initial={{ opacity: 0, x: 8 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -8 }}
-              transition={{ duration: 0.2 }}
-              className="p-4 space-y-3"
-            >
-              {aiSuggestions.map((s) => (
-                <motion.div
-                  key={s.id}
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.25 }}
-                  className="rounded-[14px] border border-border/30 bg-card p-4 space-y-3"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      {s.type === "reply" && <Sparkles size={12} strokeWidth={1.5} className="text-primary-light" />}
-                      {s.type === "action" && <Zap size={12} strokeWidth={1.5} className="text-accent-amber" />}
-                      {s.type === "knowledge" && <Brain size={12} strokeWidth={1.5} className="text-info" />}
-                      <span className="text-[11px] font-semibold text-foreground">{s.title}</span>
-                    </div>
-                    <span className="text-[10px] font-medium text-muted-foreground/40 tabular-nums">{s.confidence}%</span>
-                  </div>
-                  <p className="text-[12px] text-foreground/70 leading-relaxed">{s.content}</p>
-                  {s.source && (
-                    <p className="text-[10px] text-muted-foreground/40 flex items-center gap-1">
-                      <Brain size={9} strokeWidth={1.5} />
-                      {s.source}
-                    </p>
-                  )}
-                  <div className="flex items-center gap-1.5">
-                    {s.type === "reply" && (
-                      <>
-                        <button className="flex items-center gap-1 rounded-[8px] bg-accent px-2.5 py-1.5 text-[10px] font-semibold text-white transition-all hover:bg-accent-hover">
-                          <Send size={9} strokeWidth={2} />
-                          Send
-                        </button>
-                        <button className="flex items-center gap-1 rounded-[8px] bg-muted px-2.5 py-1.5 text-[10px] font-medium text-foreground/60 transition-all hover:bg-muted/80">
-                          <RotateCcw size={9} strokeWidth={1.5} />
-                          Regenerate
-                        </button>
-                        <button className="flex items-center gap-1 rounded-[8px] bg-muted px-2.5 py-1.5 text-[10px] font-medium text-foreground/60 transition-all hover:bg-muted/80">
-                          <AlignLeft size={9} strokeWidth={1.5} />
-                          Shorter
-                        </button>
-                      </>
-                    )}
-                    {s.type === "action" && (
-                      <button className="flex items-center gap-1 rounded-[8px] bg-primary/[0.06] px-2.5 py-1.5 text-[10px] font-medium text-primary-light transition-all hover:bg-primary/[0.1]">
-                        <Zap size={9} strokeWidth={2} />
-                        Execute
-                      </button>
-                    )}
-                    {s.type === "knowledge" && (
-                      <button className="flex items-center gap-1 rounded-[8px] bg-muted px-2.5 py-1.5 text-[10px] font-medium text-foreground/60 transition-all hover:bg-muted/80">
-                        <ChevronRight size={9} strokeWidth={2} />
-                        Share
-                      </button>
-                    )}
-                  </div>
-                </motion.div>
-              ))}
-            </motion.div>
-          )}
-
-          {activeTab === "actions" && (
-            <motion.div
-              key="actions"
-              initial={{ opacity: 0, x: 8 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -8 }}
-              transition={{ duration: 0.2 }}
-              className="p-4 space-y-2"
-            >
-              {recommendedActions.map((a, i) => {
-                const icons: Record<string, React.ComponentType<{ size?: number; strokeWidth?: number; className?: string }>> = {
-                  calendar: Calendar,
-                  "credit-card": CreditCard,
-                  user: User,
-                  package: Package,
-                  send: Send,
-                };
-                const Icon = icons[a.icon] || Zap;
-                const colors: Record<string, string> = {
-                  calendar: "#22c55e",
-                  "credit-card": "#6366f1",
-                  user: "#f59e0b",
-                  package: "#8b5cf6",
-                  send: "#3b82f6",
-                };
-                const color = colors[a.icon] || "#6b7689";
-
-                return (
-                  <motion.button
-                    key={a.id}
-                    initial={{ opacity: 0, y: 4 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.2, delay: i * 0.05 }}
-                    whileHover={{ scale: 1.01 }}
-                    whileTap={{ scale: 0.98 }}
-                    className="flex w-full items-center gap-3 rounded-[12px] border border-border/30 bg-card px-4 py-3 text-left transition-all hover:border-border/50 hover:shadow-[var(--shadow-card-hover)]"
-                  >
-                    <div
-                      className="flex h-8 w-8 items-center justify-center rounded-[8px]"
-                      style={{ backgroundColor: `${color}10` }}
-                    >
-                      <Icon size={15} strokeWidth={1.5} className={cn(color)} />
-                    </div>
-                    <span className="text-[13px] font-medium text-foreground flex-1">{a.label}</span>
-                    <ChevronRight size={14} strokeWidth={1.5} className="text-muted-foreground/30" />
-                  </motion.button>
-                );
-              })}
+              </CollapsibleSection>
             </motion.div>
           )}
         </AnimatePresence>
@@ -283,26 +267,72 @@ export function AIPanel({ conversationId }: AIPanelProps) {
   );
 }
 
-function InfoRow({ icon: Icon, label, value }: { icon: React.ComponentType<{ size?: number; strokeWidth?: number; className?: string }>; label: string; value: React.ReactNode }) {
+/* ── Helper Components ── */
+
+function CollapsibleSection({
+  title,
+  icon: Icon,
+  isCollapsed,
+  onToggle,
+  children,
+}: {
+  title: string;
+  icon: React.ComponentType<{ size?: number; strokeWidth?: number; className?: string }>;
+  isCollapsed?: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-[12px] border border-border/30 bg-card overflow-hidden">
+      <button
+        onClick={onToggle}
+        className="flex w-full items-center justify-between px-4 py-3 transition-colors duration-150 hover:bg-muted/30"
+      >
+        <div className="flex items-center gap-2">
+          <Icon size={13} strokeWidth={1.5} className="text-muted-foreground/50" />
+          <span className="text-[11px] font-semibold text-muted-foreground/60 uppercase tracking-wider">{title}</span>
+        </div>
+        <motion.div
+          animate={{ rotate: isCollapsed ? 0 : 180 }}
+          transition={{ duration: 0.2 }}
+        >
+          <ChevronDown size={14} strokeWidth={1.5} className="text-muted-foreground/30" />
+        </motion.div>
+      </button>
+      <AnimatePresence initial={false}>
+        {!isCollapsed && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <div className="px-4 pb-4">
+              {children}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="flex items-center justify-between">
-      <div className="flex items-center gap-2">
-        <Icon size={12} strokeWidth={1.5} className="text-muted-foreground/40" />
-        <span className="text-[12px] text-muted-foreground/60">{label}</span>
-      </div>
+      <span className="text-[12px] text-muted-foreground/55">{label}</span>
       {value}
     </div>
   );
 }
 
-function InsightCard({ label, value, icon: Icon, color }: { label: string; value: string; icon: React.ComponentType<{ size?: number; strokeWidth?: number; className?: string }>; color: string }) {
+function EmptyState({ icon: Icon, message }: { icon: React.ComponentType<{ size?: number; strokeWidth?: number; className?: string }>; message: string }) {
   return (
-    <div className="rounded-[10px] bg-muted/40 p-3">
-      <div className="flex items-center gap-1.5 mb-1.5">
-        <Icon size={11} strokeWidth={1.5} className={color} />
-        <span className="text-[10px] text-muted-foreground/50">{label}</span>
+    <div className="flex flex-col items-center justify-center py-6 text-center">
+      <div className="flex h-10 w-10 items-center justify-center rounded-[12px] bg-muted/50 mb-2">
+        <Icon size={16} strokeWidth={1.5} className="text-muted-foreground/25" />
       </div>
-      <p className="text-[16px] font-bold text-foreground tabular-nums">{value}</p>
+      <p className="text-[11px] text-muted-foreground/40">{message}</p>
     </div>
   );
 }

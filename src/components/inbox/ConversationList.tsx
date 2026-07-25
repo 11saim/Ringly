@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { motion } from "framer-motion";
-import { Search, SlidersHorizontal } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Search, ArrowUpDown, Pin, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { conversations, type FilterType } from "@/lib/inbox-data";
 import { FilterChips } from "./FilterChips";
@@ -16,84 +16,139 @@ interface ConversationListProps {
 export function ConversationList({ activeId, onSelect }: ConversationListProps) {
   const [filter, setFilter] = useState<FilterType>("all");
   const [search, setSearch] = useState("");
+  const [sortBy, setSortBy] = useState<"time" | "unread" | "priority">("time");
 
-  const filtered = conversations.filter((c) => {
-    if (search) {
-      const q = search.toLowerCase();
-      return c.customer.name.toLowerCase().includes(q) || c.lastMessage.toLowerCase().includes(q);
-    }
-    switch (filter) {
-      case "unread": return c.unread > 0;
-      case "ai-needs-help": return c.handler === "ai" && c.status === "pending";
-      case "bookings": return c.hasBooking;
-      case "vip": return c.customer.tags.includes("VIP");
-      case "resolved": return c.status === "resolved";
-      case "assigned": return !!c.assignedTo;
-      default: return true;
-    }
-  });
+  const filtered = conversations
+    .filter((c) => {
+      if (search) {
+        const q = search.toLowerCase();
+        return c.customer.name.toLowerCase().includes(q) || c.lastMessage.toLowerCase().includes(q);
+      }
+      switch (filter) {
+        case "unread": return c.unread > 0;
+        case "ai-needs-help": return c.handler === "ai" && c.status === "pending";
+        case "bookings": return c.hasBooking;
+        case "vip": return c.customer.tags.includes("VIP");
+        case "resolved": return c.status === "resolved";
+        case "assigned": return !!c.assignedTo;
+        default: return true;
+      }
+    })
+    .sort((a, b) => {
+      if (sortBy === "unread") return b.unread - a.unread;
+      if (sortBy === "priority") {
+        const p = { high: 3, medium: 2, low: 1 };
+        return (p[b.priority ?? "low"] ?? 0) - (p[a.priority ?? "low"] ?? 0);
+      }
+      return 0;
+    });
+
+  const pinnedCount = filtered.filter((c) => c.isPinned).length;
+  const unpinned = filtered.filter((c) => !c.isPinned);
 
   return (
     <div className="flex flex-col h-full">
-      {/* Search */}
-      <div className="px-4 pt-4 pb-2">
-        <div className="relative">
-          <Search size={14} strokeWidth={1.5} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/40" />
+      {/* Header */}
+      <div className="px-4 pt-4 pb-2 shrink-0">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <h1 className="text-[15px] font-semibold text-foreground tracking-[-0.01em]">Inbox</h1>
+            <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-accent/10 px-1.5 text-[10px] font-bold text-accent tabular-nums">
+              {conversations.filter((c) => c.unread > 0).length}
+            </span>
+          </div>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setSortBy(sortBy === "time" ? "unread" : sortBy === "unread" ? "priority" : "time")}
+              className="flex h-7 w-7 items-center justify-center rounded-[8px] text-muted-foreground/40 transition-all duration-150 hover:bg-hover-bg hover:text-foreground"
+              aria-label="Sort conversations"
+            >
+              <ArrowUpDown size={14} strokeWidth={1.5} />
+            </button>
+          </div>
+        </div>
+
+        {/* Search */}
+        <div className="relative group">
+          <Search
+            size={14}
+            strokeWidth={1.5}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/35 group-focus-within:text-accent transition-colors duration-200"
+          />
           <input
             type="text"
             placeholder="Search conversations..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className={cn(
-              "w-full rounded-[10px] border border-border/30 bg-muted/40 py-2 pl-9 pr-8 text-[13px]",
-              "text-foreground placeholder:text-muted-foreground/40",
+              "w-full rounded-[12px] border border-border/30 bg-muted/30 py-2.5 pl-9 pr-9 text-[13px]",
+              "text-foreground placeholder:text-muted-foreground/35",
               "transition-all duration-200",
-              "focus:outline-none focus:border-border/60 focus:bg-muted/60",
+              "focus:outline-none focus:border-accent/30 focus:bg-muted/50 focus:shadow-[0_0_0_3px_rgba(34,197,94,0.06)]",
             )}
           />
-          <button className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground/40 hover:text-foreground hover:bg-hover-bg transition-colors">
-            <SlidersHorizontal size={13} strokeWidth={1.5} />
-          </button>
+          {search && (
+            <button
+              onClick={() => setSearch("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground/30 hover:text-foreground hover:bg-hover-bg transition-colors"
+            >
+              <X size={12} strokeWidth={1.5} />
+            </button>
+          )}
         </div>
       </div>
 
       {/* Filters */}
       <FilterChips active={filter} onChange={setFilter} />
 
-      {/* List */}
-      <div className="flex-1 overflow-y-auto px-2 pb-3 scrollbar-thin">
-        <motion.div
-          initial="hidden"
-          animate="show"
-          variants={{
-            hidden: { opacity: 0 },
-            show: { opacity: 1, transition: { staggerChildren: 0.03 } },
-          }}
-          className="space-y-0.5"
-        >
-          {filtered.map((c) => (
-            <motion.div
-              key={c.id}
-              variants={{
-                hidden: { opacity: 0, y: 4 },
-                show: { opacity: 1, y: 0, transition: { duration: 0.2 } },
-              }}
-            >
-              <ConversationRow
-                conversation={c}
-                isActive={activeId === c.id}
-                onClick={() => onSelect(c.id)}
-              />
-            </motion.div>
-          ))}
-        </motion.div>
+      {/* Sort Indicator */}
+      {sortBy !== "time" && (
+        <div className="px-4 pb-2">
+          <span className="text-[10px] font-medium text-muted-foreground/40 uppercase tracking-wider">
+            Sorted by {sortBy}
+          </span>
+        </div>
+      )}
 
-        {filtered.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-12 text-center">
-            <p className="text-[13px] font-medium text-muted-foreground/50">No conversations found</p>
-            <p className="text-[12px] text-muted-foreground/35 mt-1">Try a different filter</p>
+      {/* List */}
+      <div className="flex-1 overflow-y-auto px-2 pb-3 scrollbar-premium">
+        {pinnedCount > 0 && (
+          <div className="mb-1">
+            <div className="flex items-center gap-1.5 px-3 py-1.5">
+              <Pin size={10} strokeWidth={1.5} className="text-muted-foreground/30" />
+              <span className="text-[10px] font-semibold text-muted-foreground/35 uppercase tracking-wider">Pinned</span>
+            </div>
+            {filtered.filter((c) => c.isPinned).map((c) => (
+              <ConversationRow key={c.id} conversation={c} isActive={activeId === c.id} onClick={() => onSelect(c.id)} />
+            ))}
           </div>
         )}
+
+        <div className="space-y-0.5">
+          {unpinned.map((c) => (
+            <ConversationRow key={c.id} conversation={c} isActive={activeId === c.id} onClick={() => onSelect(c.id)} />
+          ))}
+        </div>
+
+        {/* Empty State */}
+        <AnimatePresence>
+          {filtered.length === 0 && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="flex flex-col items-center justify-center py-16 text-center"
+            >
+              <div className="flex h-14 w-14 items-center justify-center rounded-[16px] bg-muted/50 mb-4">
+                <Search size={22} strokeWidth={1.5} className="text-muted-foreground/25" />
+              </div>
+              <p className="text-[13px] font-semibold text-foreground/60 mb-1">No conversations found</p>
+              <p className="text-[12px] text-muted-foreground/40 max-w-[200px] leading-relaxed">
+                {search ? "Try a different search term" : "No conversations match this filter"}
+              </p>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );

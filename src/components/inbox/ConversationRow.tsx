@@ -1,8 +1,9 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { Calendar } from "lucide-react";
+import { Calendar, Archive, UserPlus, Pin, CheckCheck, MoreHorizontal } from "lucide-react";
 import type { Conversation } from "@/lib/inbox-data";
 
 interface ConversationRowProps {
@@ -12,39 +13,50 @@ interface ConversationRowProps {
 }
 
 export function ConversationRow({ conversation, isActive, onClick }: ConversationRowProps) {
+  const [isHovered, setIsHovered] = useState(false);
   const c = conversation;
   const hasUnread = c.unread > 0;
 
   return (
-    <motion.button
-      whileHover={{ x: 1 }}
-      whileTap={{ scale: 0.995 }}
+    <button
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
       onClick={onClick}
       className={cn(
-        "group flex w-full items-center gap-3 px-4 py-3 text-left",
-        "transition-all duration-150 rounded-[12px] mx-1",
+        "group flex w-full items-start gap-3 px-3 py-3 text-left rounded-[10px] mx-1 relative",
+        "transition-all duration-150",
         isActive
-          ? "bg-muted"
+          ? "bg-accent/[0.06] shadow-[inset_0_0_0_1px_rgba(34,197,94,0.12)]"
           : "hover:bg-hover-bg/60",
-        hasUnread && !isActive && "bg-accent/[0.03]",
+        hasUnread && !isActive && "bg-accent/[0.02]",
       )}
+      aria-label={`Conversation with ${c.customer.name}`}
+      aria-current={isActive ? "true" : undefined}
     >
+      {/* Active Indicator */}
+      {isActive && (
+        <div className="absolute left-0 top-3 bottom-3 w-[2px] rounded-full bg-accent" />
+      )}
+
       {/* Avatar */}
       <div className="relative shrink-0">
         <div className={cn(
-          "flex h-10 w-10 items-center justify-center rounded-full text-[12px] font-semibold",
-          hasUnread ? "bg-foreground text-background" : "bg-muted text-foreground/60",
+          "flex h-10 w-10 items-center justify-center rounded-[12px] text-[12px] font-semibold transition-all duration-150",
+          hasUnread
+            ? "bg-accent text-white"
+            : "bg-muted text-foreground/50",
+          isActive && !hasUnread && "bg-accent/10 text-accent",
         )}>
           {c.customer.initials}
         </div>
         {c.customer.online && (
-          <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-card bg-success" />
+          <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-card bg-accent" />
         )}
       </div>
 
       {/* Content */}
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center justify-between gap-2">
+      <div className="min-w-0 flex-1 pt-0.5">
+        <div className="flex items-center justify-between gap-2 mb-0.5">
           <div className="flex items-center gap-1.5 min-w-0">
             <span className={cn(
               "text-[13px] truncate",
@@ -52,46 +64,90 @@ export function ConversationRow({ conversation, isActive, onClick }: Conversatio
             )}>
               {c.customer.name}
             </span>
-            {/* WhatsApp badge */}
-            <span className="inline-flex shrink-0 items-center justify-center rounded-full bg-muted px-1 py-0.5">
-              <svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor" className="text-muted-foreground/40">
-                <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z" />
-              </svg>
-            </span>
-            {/* AI/Human badge */}
-            <span className={cn(
-              "inline-flex shrink-0 items-center rounded-full px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-wider",
-              c.handler === "ai"
-                ? "bg-primary/[0.06] text-primary-light"
-                : "bg-accent-amber/10 text-accent-amber",
-            )}>
-              {c.handler === "ai" ? "AI" : "Human"}
-            </span>
+            {c.customer.tags.includes("VIP") && (
+              <span className="inline-flex shrink-0 items-center rounded-full bg-amber-500/10 px-1.5 py-[1px] text-[8px] font-bold uppercase tracking-wider text-amber-600">
+                VIP
+              </span>
+            )}
+            {c.priority === "high" && (
+              <span className="inline-flex shrink-0 items-center rounded-full bg-destructive/10 px-1.5 py-[1px] text-[8px] font-bold uppercase tracking-wider text-destructive">
+                Urgent
+              </span>
+            )}
           </div>
-          <span className="text-[11px] text-muted-foreground/40 whitespace-nowrap tabular-nums">
+          <span className={cn(
+            "text-[11px] whitespace-nowrap tabular-nums",
+            hasUnread ? "text-foreground/50 font-medium" : "text-muted-foreground/35",
+          )}>
             {c.lastMessageTime}
           </span>
         </div>
 
-        <div className="flex items-center justify-between gap-2 mt-1">
+        <div className="flex items-center justify-between gap-2">
           <p className={cn(
             "text-[12px] truncate leading-snug",
-            hasUnread ? "text-foreground/70" : "text-muted-foreground/50",
+            hasUnread ? "text-foreground/60" : "text-muted-foreground/45",
           )}>
             {c.lastMessage}
           </p>
           <div className="flex items-center gap-1.5 shrink-0">
             {c.hasBooking && (
-              <Calendar size={10} strokeWidth={1.5} className="text-muted-foreground/30" />
+              <div className="flex h-4 w-4 items-center justify-center rounded-[4px] bg-accent/8">
+                <Calendar size={9} strokeWidth={1.5} className="text-accent" />
+              </div>
+            )}
+            {c.isPinned && (
+              <Pin size={9} strokeWidth={1.5} className="text-muted-foreground/25" />
             )}
             {hasUnread && (
-              <span className="flex h-4.5 min-w-[18px] items-center justify-center rounded-full bg-accent px-1 text-[9px] font-bold text-white">
+              <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-accent px-1 text-[10px] font-bold text-white">
                 {c.unread}
               </span>
             )}
           </div>
         </div>
+
+        {/* Typing Indicator */}
+        {c.isTyping && (
+          <div className="flex items-center gap-1.5 mt-1.5">
+            <div className="flex gap-[3px] items-center h-3">
+              <span className="h-[4px] w-[4px] rounded-full bg-accent/60 animate-typing-dot" style={{ animationDelay: "0ms" }} />
+              <span className="h-[4px] w-[4px] rounded-full bg-accent/60 animate-typing-dot" style={{ animationDelay: "200ms" }} />
+              <span className="h-[4px] w-[4px] rounded-full bg-accent/60 animate-typing-dot" style={{ animationDelay: "400ms" }} />
+            </div>
+            <span className="text-[10px] text-muted-foreground/40 font-medium">typing</span>
+          </div>
+        )}
       </div>
-    </motion.button>
+
+      {/* Hover Actions */}
+      <AnimatePresence>
+        {isHovered && !isActive && (
+          <motion.div
+            initial={{ opacity: 0, x: 4 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 4 }}
+            transition={{ duration: 0.1 }}
+            className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-0.5 bg-card rounded-[8px] border border-border/30 px-1 py-0.5 shadow-[var(--shadow-card)]"
+          >
+            {[
+              { icon: Archive, label: "Archive" },
+              { icon: UserPlus, label: "Assign" },
+              { icon: CheckCheck, label: "Mark read" },
+              { icon: MoreHorizontal, label: "More" },
+            ].map(({ icon: Icon, label }) => (
+              <button
+                key={label}
+                onClick={(e) => { e.stopPropagation(); }}
+                className="flex h-6 w-6 items-center justify-center rounded-[6px] text-muted-foreground/40 transition-all duration-100 hover:bg-hover-bg hover:text-foreground"
+                title={label}
+              >
+                <Icon size={11} strokeWidth={1.5} />
+              </button>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </button>
   );
 }
