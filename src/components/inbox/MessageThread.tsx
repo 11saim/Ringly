@@ -4,8 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Paperclip, Smile, Send, Image as ImageIcon,
-  MoreHorizontal, Phone, Video, Archive, Clock,
-  MessageSquare, ExternalLink,
+  MoreHorizontal, Phone, Clock, MessageSquare, PanelRightClose, PanelRightOpen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { activeConversationMessages, conversations, type Message } from "@/lib/inbox-data";
@@ -13,9 +12,11 @@ import { MessageBubble } from "./MessageBubble";
 
 interface MessageThreadProps {
   conversationId: string | null;
+  onToggleRight: () => void;
+  rightOpen: boolean;
 }
 
-export function MessageThread({ conversationId }: MessageThreadProps) {
+export function MessageThread({ conversationId, onToggleRight, rightOpen }: MessageThreadProps) {
   const [messages, setMessages] = useState<Message[]>(activeConversationMessages);
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
@@ -53,15 +54,15 @@ export function MessageThread({ conversationId }: MessageThreadProps) {
     setIsTyping(true);
     setTimeout(() => {
       setIsTyping(false);
-      const aiReply: Message = {
+      const reply: Message = {
         id: `m${Date.now() + 1}`,
-        sender: "ai",
-        text: "Thanks for your message! I'm processing your request and will get back to you shortly.",
+        sender: "customer",
+        text: "Thanks for your message! I'll get back to you shortly.",
         time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         date: "Today",
         type: "text",
       };
-      setMessages((prev) => [...prev, aiReply]);
+      setMessages((prev) => [...prev, reply]);
     }, 1500);
   };
 
@@ -99,13 +100,6 @@ export function MessageThread({ conversationId }: MessageThreadProps) {
     }
   });
 
-  const actionButtons = [
-    { icon: Phone, label: "Call" },
-    { icon: Video, label: "Video" },
-    { icon: ExternalLink, label: "WhatsApp" },
-    { icon: Archive, label: "Archive" },
-  ];
-
   return (
     <div className="flex flex-col h-full bg-background">
       {/* ── Fixed Header ── */}
@@ -125,16 +119,11 @@ export function MessageThread({ conversationId }: MessageThreadProps) {
               <span className="text-[11px] text-muted-foreground/40">{conversation.customer.phone}</span>
             </div>
             <div className="flex items-center gap-2 mt-0.5">
-              {conversation.customer.tags.map((tag) => (
-                <span key={tag} className={cn(
-                  "rounded-full px-1.5 py-[1px] text-[9px] font-semibold uppercase tracking-wider border",
-                  tag === "VIP"
-                    ? "bg-amber-500/10 text-amber-600 border-amber-500/15"
-                    : "bg-muted text-muted-foreground/50 border-border/30",
-                )}>
-                  {tag}
-                </span>
-              ))}
+              {conversation.customer.online ? (
+                <span className="text-[10px] text-accent font-medium">Online</span>
+              ) : (
+                <span className="text-[10px] text-muted-foreground/40">{conversation.customer.lastSeen}</span>
+              )}
               <span className="text-[10px] text-muted-foreground/25">·</span>
               <div className="flex items-center gap-1">
                 <Clock size={9} strokeWidth={1.5} className="text-muted-foreground/30" />
@@ -145,23 +134,25 @@ export function MessageThread({ conversationId }: MessageThreadProps) {
         </div>
 
         <div className="flex items-center gap-0.5">
-          {actionButtons.map(({ icon: Icon, label }) => (
-            <button
-              key={label}
-              title={label}
-              className={cn(
-                "flex h-8 w-8 items-center justify-center rounded-[8px] text-muted-foreground/40",
-                "transition-all duration-150 hover:bg-hover-bg hover:text-foreground",
-              )}
-            >
-              <Icon size={15} strokeWidth={1.5} />
-            </button>
-          ))}
-          <div className="w-px h-5 bg-border/20 mx-1" />
           <button
+            title="Call"
+            className="flex h-8 w-8 items-center justify-center rounded-[8px] text-muted-foreground/40 transition-all duration-150 hover:bg-hover-bg hover:text-foreground"
+          >
+            <Phone size={15} strokeWidth={1.5} />
+          </button>
+          <button
+            title="More"
             className="flex h-8 w-8 items-center justify-center rounded-[8px] text-muted-foreground/40 transition-all duration-150 hover:bg-hover-bg hover:text-foreground"
           >
             <MoreHorizontal size={15} strokeWidth={1.5} />
+          </button>
+          <div className="w-px h-5 bg-border/20 mx-1" />
+          <button
+            onClick={onToggleRight}
+            title={rightOpen ? "Close sidebar" : "Open sidebar"}
+            className="flex h-8 w-8 items-center justify-center rounded-[8px] text-muted-foreground/40 transition-all duration-150 hover:bg-hover-bg hover:text-foreground"
+          >
+            {rightOpen ? <PanelRightClose size={15} strokeWidth={1.5} /> : <PanelRightOpen size={15} strokeWidth={1.5} />}
           </button>
         </div>
       </div>
@@ -194,9 +185,6 @@ export function MessageThread({ conversationId }: MessageThreadProps) {
               exit={{ opacity: 0, y: -8 }}
               className="flex items-start gap-2 my-3"
             >
-              <div className="flex h-7 w-7 items-center justify-center rounded-[10px] bg-muted mt-0.5">
-                <span className="h-1.5 w-1.5 rounded-full bg-primary-light/60" />
-              </div>
               <div className="rounded-[16px] rounded-bl-[4px] bg-muted px-4 py-3">
                 <div className="flex gap-1">
                   <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/30 animate-typing-dot" style={{ animationDelay: "0ms" }} />
@@ -265,16 +253,6 @@ export function MessageThread({ conversationId }: MessageThreadProps) {
               </button>
             </div>
           </div>
-        </div>
-
-        {/* Keyboard Hints */}
-        <div className="flex items-center gap-3 mt-2 px-1">
-          <span className="text-[10px] text-muted-foreground/25">
-            <kbd className="font-mono">Enter</kbd> to send
-          </span>
-          <span className="text-[10px] text-muted-foreground/25">
-            <kbd className="font-mono">Shift+Enter</kbd> for new line
-          </span>
         </div>
       </div>
     </div>

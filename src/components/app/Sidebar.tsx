@@ -41,7 +41,7 @@ export function Sidebar() {
   }, [isMobile, collapsed, setCollapsed]);
 
   const isActive = (href: string) => {
-    if (href === "/dashboard") return pathname === "/dashboard";
+    if (href === "/inbox") return pathname === "/inbox" || pathname === "/";
     return pathname === href || pathname.startsWith(href + "/");
   };
 

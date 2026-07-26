@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, ArrowUpDown, Pin, X } from "lucide-react";
+import { Search, X, Pin } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { conversations, type FilterType } from "@/lib/inbox-data";
-import { FilterChips } from "./FilterChips";
+import { conversations } from "@/lib/inbox-data";
+import { FilterChips, type InboxFilter } from "./FilterChips";
 import { ConversationRow } from "./ConversationRow";
 
 interface ConversationListProps {
@@ -14,36 +14,33 @@ interface ConversationListProps {
 }
 
 export function ConversationList({ activeId, onSelect }: ConversationListProps) {
-  const [filter, setFilter] = useState<FilterType>("all");
+  const [filter, setFilter] = useState<InboxFilter>("all");
   const [search, setSearch] = useState("");
-  const [sortBy, setSortBy] = useState<"time" | "unread" | "priority">("time");
 
-  const filtered = conversations
-    .filter((c) => {
-      if (search) {
-        const q = search.toLowerCase();
-        return c.customer.name.toLowerCase().includes(q) || c.lastMessage.toLowerCase().includes(q);
-      }
-      switch (filter) {
-        case "unread": return c.unread > 0;
-        case "ai-needs-help": return c.handler === "ai" && c.status === "pending";
-        case "bookings": return c.hasBooking;
-        case "vip": return c.customer.tags.includes("VIP");
-        case "resolved": return c.status === "resolved";
-        case "assigned": return !!c.assignedTo;
-        default: return true;
-      }
-    })
-    .sort((a, b) => {
-      if (sortBy === "unread") return b.unread - a.unread;
-      if (sortBy === "priority") {
-        const p = { high: 3, medium: 2, low: 1 };
-        return (p[b.priority ?? "low"] ?? 0) - (p[a.priority ?? "low"] ?? 0);
-      }
-      return 0;
-    });
+  const counts = useMemo(() => ({
+    all: conversations.length,
+    unread: conversations.filter((c) => c.unread > 0).length,
+    assigned: conversations.filter((c) => !!c.assignedTo).length,
+    resolved: conversations.filter((c) => c.status === "resolved").length,
+  }), []);
 
-  const pinnedCount = filtered.filter((c) => c.isPinned).length;
+  const filtered = useMemo(() => {
+    return conversations
+      .filter((c) => {
+        if (search) {
+          const q = search.toLowerCase();
+          return c.customer.name.toLowerCase().includes(q) || c.lastMessage.toLowerCase().includes(q);
+        }
+        switch (filter) {
+          case "unread": return c.unread > 0;
+          case "assigned": return !!c.assignedTo;
+          case "resolved": return c.status === "resolved";
+          default: return true;
+        }
+      });
+  }, [filter, search]);
+
+  const pinned = filtered.filter((c) => c.isPinned);
   const unpinned = filtered.filter((c) => !c.isPinned);
 
   return (
@@ -54,17 +51,8 @@ export function ConversationList({ activeId, onSelect }: ConversationListProps) 
           <div className="flex items-center gap-2">
             <h1 className="text-[15px] font-semibold text-foreground tracking-[-0.01em]">Inbox</h1>
             <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-accent/10 px-1.5 text-[10px] font-bold text-accent tabular-nums">
-              {conversations.filter((c) => c.unread > 0).length}
+              {counts.unread}
             </span>
-          </div>
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setSortBy(sortBy === "time" ? "unread" : sortBy === "unread" ? "priority" : "time")}
-              className="flex h-7 w-7 items-center justify-center rounded-[8px] text-muted-foreground/40 transition-all duration-150 hover:bg-hover-bg hover:text-foreground"
-              aria-label="Sort conversations"
-            >
-              <ArrowUpDown size={14} strokeWidth={1.5} />
-            </button>
           </div>
         </div>
 
@@ -99,26 +87,17 @@ export function ConversationList({ activeId, onSelect }: ConversationListProps) 
       </div>
 
       {/* Filters */}
-      <FilterChips active={filter} onChange={setFilter} />
-
-      {/* Sort Indicator */}
-      {sortBy !== "time" && (
-        <div className="px-4 pb-2">
-          <span className="text-[10px] font-medium text-muted-foreground/40 uppercase tracking-wider">
-            Sorted by {sortBy}
-          </span>
-        </div>
-      )}
+      <FilterChips active={filter} onChange={setFilter} counts={counts} />
 
       {/* List */}
       <div className="flex-1 overflow-y-auto px-2 pb-3 scrollbar-premium">
-        {pinnedCount > 0 && (
+        {pinned.length > 0 && (
           <div className="mb-1">
             <div className="flex items-center gap-1.5 px-3 py-1.5">
               <Pin size={10} strokeWidth={1.5} className="text-muted-foreground/30" />
               <span className="text-[10px] font-semibold text-muted-foreground/35 uppercase tracking-wider">Pinned</span>
             </div>
-            {filtered.filter((c) => c.isPinned).map((c) => (
+            {pinned.map((c) => (
               <ConversationRow key={c.id} conversation={c} isActive={activeId === c.id} onClick={() => onSelect(c.id)} />
             ))}
           </div>

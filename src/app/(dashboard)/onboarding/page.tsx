@@ -69,14 +69,14 @@ export default function OnboardingPage() {
           <p className="mt-3 max-w-2xl text-muted-foreground">Each answer updates the launch preview instantly, so the setup never feels empty.</p>
 
           <div className="mt-8 rounded-2xl border border-border bg-[color:var(--surface-2)] p-5">
-            <div className="flex gap-3"><span className="grid h-10 w-10 place-items-center rounded-xl bg-primary text-primary-foreground"><Sparkles className="h-5 w-5" /></span><div><div className="font-semibold">{done ? "You&apos;re ready to launch" : current.prompt}</div><div className="mt-1 text-sm text-muted-foreground">{done ? "Review the right panel, then open the dashboard." : "Answer in natural language — the agent extracts structure for you."}</div></div></div>
+            <div className="flex gap-3"><span className="grid h-10 w-10 place-items-center rounded-xl bg-primary text-primary-foreground"><Sparkles className="h-5 w-5" /></span><div><div className="font-semibold">{done ? "You&apos;re ready to launch" : current.prompt}</div><div className="mt-1 text-sm text-muted-foreground">{done ? "Review the right panel, then open the inbox." : "Answer in natural language — the agent extracts structure for you."}</div></div></div>
             {!done ? (
               <div className="mt-5 flex gap-2">
                 {current.id === "policy" ? <Textarea value={input} onChange={(e) => setInput(e.target.value)} placeholder={current.placeholder} rows={3} /> : <Input value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && submit()} placeholder={current.placeholder} />}
                 <Button type="button" onClick={submit} disabled={!input.trim()}><Send className="h-4 w-4" /></Button>
               </div>
             ) : (
-              <Button className="mt-5" size="lg" onClick={() => router.push("/dashboard")}>Launch dashboard <ArrowRight className="ml-2 h-4 w-4" /></Button>
+              <Button className="mt-5" size="lg" onClick={() => router.push("/inbox")}>Open Inbox <ArrowRight className="ml-2 h-4 w-4" /></Button>
             )}
           </div>
 
@@ -93,7 +93,7 @@ export default function OnboardingPage() {
           <div className="rounded-xl border border-border p-4"><div className="text-xs text-muted-foreground">Business</div><div className="mt-1 font-bold">{answers.business || "Waiting for profile"}</div></div>
           <div className="mt-3 rounded-xl border border-border p-4"><div className="mb-3 flex items-center justify-between"><span className="text-xs text-muted-foreground">Catalog</span><Badge variant="secondary">{catalog.length}</Badge></div>{catalog.length ? catalog.map((item) => <div key={item.name} className="mb-2 flex justify-between text-sm last:mb-0"><span>{item.name}</span><span className="font-mono">${item.price}</span></div>) : <div className="text-sm text-muted-foreground">Paste prices to populate this card.</div>}</div>
           <div className="mt-3 rounded-xl border border-border p-4"><div className="text-xs text-muted-foreground">Automation rules</div><div className="mt-2 text-sm">{answers.policy || "No rules yet."}</div></div>
-          <div className="mt-3 rounded-xl border border-border bg-accent-soft p-4 text-primary"><div className="flex items-center gap-2 font-semibold"><Zap className="h-4 w-4" /> Next action</div><div className="mt-1 text-sm text-foreground/80">{done ? "Open dashboard and test the live agent." : "Continue setup to unlock launch."}</div></div>
+          <div className="mt-3 rounded-xl border border-border bg-accent-soft p-4 text-primary"><div className="flex items-center gap-2 font-semibold"><Zap className="h-4 w-4" /> Next action</div><div className="mt-1 text-sm text-foreground/80">{done ? "Open inbox and test the live agent." : "Continue setup to unlock launch."}</div></div>
         </aside>
       </main>
     </div>

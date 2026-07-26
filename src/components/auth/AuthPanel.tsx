@@ -29,7 +29,7 @@ export default function AuthPanel({ initialMode = "signup" }: Props) {
     setTimeout(() => {
       setSubmitted(true);
       setLoading(false);
-      setTimeout(() => router.push(isSignup ? "/onboarding" : "/dashboard"), 1200);
+      setTimeout(() => router.push(isSignup ? "/onboarding" : "/inbox"), 1200);
     }, 800);
   };
 

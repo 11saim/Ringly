@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import {
   CheckCircle2, Calendar, CreditCard, MapPin, Mic,
-  Copy, RotateCcw, Trash2, Reply, Smile,
+  Copy, Reply, Smile, Trash2,
 } from "lucide-react";
 import type { Message } from "@/lib/inbox-data";
 
@@ -16,7 +16,6 @@ interface MessageBubbleProps {
 export function MessageBubble({ message }: MessageBubbleProps) {
   const [isHovered, setIsHovered] = useState(false);
   const isCustomer = message.sender === "customer";
-  const isAI = message.sender === "ai";
 
   if (message.type === "booking" && message.bookingData) {
     const b = message.bookingData;
@@ -131,16 +130,6 @@ export function MessageBubble({ message }: MessageBubbleProps) {
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      {/* Sender label */}
-      {isAI && (
-        <span className="text-[10px] font-medium text-muted-foreground/45 mb-1 ml-1 flex items-center gap-1.5">
-          <span className="flex h-3.5 w-3.5 items-center justify-center rounded-[5px] bg-primary-light/8">
-            <span className="h-1 w-1 rounded-full bg-primary-light/70" />
-          </span>
-          AI Agent
-        </span>
-      )}
-
       {/* Bubble */}
       <div className={cn(
         "rounded-[18px] px-4 py-2.5 max-w-[380px] text-[13px] leading-relaxed relative",

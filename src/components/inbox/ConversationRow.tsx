@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { Calendar, Archive, UserPlus, Pin, CheckCheck, MoreHorizontal } from "lucide-react";
+import { Archive, UserPlus, CheckCheck, MoreHorizontal } from "lucide-react";
 import type { Conversation } from "@/lib/inbox-data";
 
 interface ConversationRowProps {
@@ -57,24 +57,12 @@ export function ConversationRow({ conversation, isActive, onClick }: Conversatio
       {/* Content */}
       <div className="min-w-0 flex-1 pt-0.5">
         <div className="flex items-center justify-between gap-2 mb-0.5">
-          <div className="flex items-center gap-1.5 min-w-0">
-            <span className={cn(
-              "text-[13px] truncate",
-              hasUnread ? "font-semibold text-foreground" : "font-medium text-foreground/80",
-            )}>
-              {c.customer.name}
-            </span>
-            {c.customer.tags.includes("VIP") && (
-              <span className="inline-flex shrink-0 items-center rounded-full bg-amber-500/10 px-1.5 py-[1px] text-[8px] font-bold uppercase tracking-wider text-amber-600">
-                VIP
-              </span>
-            )}
-            {c.priority === "high" && (
-              <span className="inline-flex shrink-0 items-center rounded-full bg-destructive/10 px-1.5 py-[1px] text-[8px] font-bold uppercase tracking-wider text-destructive">
-                Urgent
-              </span>
-            )}
-          </div>
+          <span className={cn(
+            "text-[13px] truncate",
+            hasUnread ? "font-semibold text-foreground" : "font-medium text-foreground/80",
+          )}>
+            {c.customer.name}
+          </span>
           <span className={cn(
             "text-[11px] whitespace-nowrap tabular-nums",
             hasUnread ? "text-foreground/50 font-medium" : "text-muted-foreground/35",
@@ -90,21 +78,11 @@ export function ConversationRow({ conversation, isActive, onClick }: Conversatio
           )}>
             {c.lastMessage}
           </p>
-          <div className="flex items-center gap-1.5 shrink-0">
-            {c.hasBooking && (
-              <div className="flex h-4 w-4 items-center justify-center rounded-[4px] bg-accent/8">
-                <Calendar size={9} strokeWidth={1.5} className="text-accent" />
-              </div>
-            )}
-            {c.isPinned && (
-              <Pin size={9} strokeWidth={1.5} className="text-muted-foreground/25" />
-            )}
-            {hasUnread && (
-              <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-accent px-1 text-[10px] font-bold text-white">
-                {c.unread}
-              </span>
-            )}
-          </div>
+          {hasUnread && (
+            <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-accent px-1 text-[10px] font-bold text-white shrink-0">
+              {c.unread}
+            </span>
+          )}
         </div>
 
         {/* Typing Indicator */}

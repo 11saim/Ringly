@@ -1,17 +1,12 @@
 import {
-  LayoutDashboard,
   Inbox,
-  Users,
   Bot,
   BookOpen,
   Calendar,
   ShoppingCart,
   Package,
   Scissors,
-  Megaphone,
   BarChart3,
-  Plug,
-  Users as TeamIcon,
   CreditCard,
   Settings,
   type LucideIcon,
@@ -34,12 +29,10 @@ export interface NavSection {
 
 export const navSections: NavSection[] = [
   {
-    id: "workspace",
-    label: "WORKSPACE",
+    id: "communication",
+    label: "COMMUNICATION",
     items: [
-      { id: "dashboard", label: "Overview", href: "/dashboard", icon: LayoutDashboard, shortcut: "G D" },
       { id: "inbox", label: "Inbox", href: "/inbox", icon: Inbox, shortcut: "G I", badge: 3 },
-      { id: "customers", label: "Customers", href: "/customers", icon: Users, shortcut: "G C" },
     ],
   },
   {
@@ -61,10 +54,9 @@ export const navSections: NavSection[] = [
     ],
   },
   {
-    id: "growth",
-    label: "GROWTH",
+    id: "reports",
+    label: "REPORTS",
     items: [
-      { id: "broadcasts", label: "Broadcasts", href: "/broadcasts", icon: Megaphone, shortcut: "G M" },
       { id: "analytics", label: "Analytics", href: "/analytics", icon: BarChart3, shortcut: "G X" },
     ],
   },
@@ -72,8 +64,6 @@ export const navSections: NavSection[] = [
     id: "system",
     label: "SYSTEM",
     items: [
-      { id: "integrations", label: "Integrations", href: "/integrations", icon: Plug, shortcut: "G N" },
-      { id: "team", label: "Team", href: "/team", icon: TeamIcon, shortcut: "G T" },
       { id: "billing", label: "Billing", href: "/billing", icon: CreditCard, shortcut: "G B" },
       { id: "settings", label: "Settings", href: "/settings", icon: Settings, shortcut: "G ," },
     ],

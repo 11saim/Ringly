@@ -21,19 +21,14 @@ interface HeaderProps {
 }
 
 const breadcrumbNames: Record<string, string> = {
-  dashboard: "Dashboard",
   inbox: "Inbox",
-  customers: "Customers",
   agent: "AI Agent",
   knowledge: "Knowledge Base",
   bookings: "Bookings",
   orders: "Orders",
   products: "Products",
   services: "Services",
-  broadcasts: "Broadcasts",
   analytics: "Analytics",
-  integrations: "Integrations",
-  team: "Team",
   billing: "Billing",
   settings: "Settings",
 };
