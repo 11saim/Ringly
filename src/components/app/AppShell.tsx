@@ -1,47 +1,23 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Container } from "./Container";
-import { Header } from "./Header";
 import { Sidebar } from "./Sidebar";
-import { CommandPalette } from "./CommandPalette";
+import { Header } from "./Header";
 import { useSidebarCollapsed } from "@/hooks/use-sidebar-store";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 
 interface AppShellProps {
-  title?: string;
-  subtitle?: string;
   children: React.ReactNode;
-  actions?: React.ReactNode;
-  fullWidth?: boolean;
 }
 
-export function AppShell({
-  title,
-  children,
-  actions,
-  fullWidth = false,
-}: AppShellProps) {
-  const [paletteOpen, setPaletteOpen] = useState(false);
+export function AppShell({ children }: AppShellProps) {
   const [collapsed] = useSidebarCollapsed();
   const isMobile = useIsMobile();
 
-  useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
-        e.preventDefault();
-        setPaletteOpen((o) => !o);
-      }
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, []);
-
-  const sidebarWidth = isMobile ? 0 : collapsed ? 80 : 296;
+  const sidebarWidth = isMobile ? 0 : collapsed ? 64 : 240;
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen bg-[var(--parchment)] text-[var(--ink)]">
       <Sidebar />
 
       <main
@@ -51,35 +27,12 @@ export function AppShell({
         )}
         style={{ marginLeft: sidebarWidth }}
       >
-        <Header
-          title={title}
-          onSearchClick={() => setPaletteOpen(true)}
-        />
+        <Header />
 
-        {fullWidth ? (
-          <div className="px-8 pb-8 pt-6 animate-fade-in">
-            {actions && (
-              <div className="mb-8 flex items-center justify-between">
-                {actions}
-              </div>
-            )}
-            {children}
-          </div>
-        ) : (
-          <Container maxWidth="7xl" padding="lg">
-            {actions && (
-              <div className="mb-8 flex items-center justify-between">
-                {actions}
-              </div>
-            )}
-            <div className="animate-fade-in">
-              {children}
-            </div>
-          </Container>
-        )}
+        <div className="p-6 animate-fade-in">
+          {children}
+        </div>
       </main>
-
-      <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
     </div>
   );
 }

@@ -1,35 +1,29 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import type { HTMLAttributes } from "react";
-
-interface SectionHeadingProps extends HTMLAttributes<HTMLDivElement> {
-  title: string;
-  description?: string;
-  action?: React.ReactNode;
-}
 
 export function SectionHeading({
+  icon: Icon,
   title,
   description,
-  action,
   className,
-  ...props
-}: SectionHeadingProps) {
+}: {
+  icon: React.ElementType;
+  title: string;
+  description: string;
+  className?: string;
+}) {
   return (
-    <div
-      className={cn("mb-6 flex items-baseline justify-between", className)}
-      {...props}
-    >
-      <div className="min-w-0 flex-1">
-        <h2 className="text-lg font-semibold tracking-tight text-foreground">
-          {title}
-        </h2>
-        {description && (
-          <p className="mt-1 text-sm text-muted-foreground">{description}</p>
-        )}
+    <div className={cn("flex items-start gap-3 mb-4", className)}>
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[var(--mist)] text-[var(--cedar)]">
+        <Icon className="h-4 w-4" />
       </div>
-      {action && <div className="ml-4 shrink-0">{action}</div>}
+      <div>
+        <h3 className="text-sm font-semibold text-[var(--ink)] font-[family-name:var(--font-dm-sans)]">
+          {title}
+        </h3>
+        <p className="text-xs text-[var(--ash)] mt-0.5">{description}</p>
+      </div>
     </div>
   );
 }

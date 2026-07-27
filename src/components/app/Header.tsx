@@ -1,138 +1,79 @@
 "use client";
 
-import { usePathname } from "next/navigation";
-import { Search } from "lucide-react";
+import { useState } from "react";
+import { LogOut, Settings, User } from "lucide-react";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ThemeToggle } from "./ThemeToggle";
-import { NotificationButton } from "./NotificationButton";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useTenant } from "@/lib/tenant-context";
+import { useSidebarCollapsed } from "@/hooks/use-sidebar-store";
 import { cn } from "@/lib/utils";
 
-interface HeaderProps {
-  title?: string;
-  onSearchClick?: () => void;
-}
-
-const breadcrumbNames: Record<string, string> = {
-  inbox: "Inbox",
-  agent: "AI Agent",
-  knowledge: "Knowledge Base",
-  bookings: "Bookings",
-  orders: "Orders",
-  products: "Products",
-  services: "Services",
-  analytics: "Analytics",
-  billing: "Billing",
-  settings: "Settings",
-};
-
-export function Header({ title, onSearchClick }: HeaderProps) {
-  const pathname = usePathname();
-
-  const generateBreadcrumbs = () => {
-    const segments = pathname.split("/").filter(Boolean);
-    if (segments.length === 0) return [];
-
-    return segments.map((segment, index) => {
-      const href = "/" + segments.slice(0, index + 1).join("/");
-      const name =
-        breadcrumbNames[segment] ||
-        segment.charAt(0).toUpperCase() + segment.slice(1);
-      const isLast = index === segments.length - 1;
-
-      return { href, name, isLast };
-    });
-  };
-
-  const breadcrumbs = generateBreadcrumbs();
+export function Header() {
+  const tenant = useTenant();
+  const [collapsed] = useSidebarCollapsed();
+  const [mobileOpen] = useState(false);
 
   return (
     <header
       className={cn(
-        "sticky top-0 z-30 flex h-[60px] items-center justify-between",
-        "border-b border-border bg-card/80 backdrop-blur-md",
-        "px-8",
+        "sticky top-0 z-30 flex h-14 items-center justify-between",
+        "border-b border-[var(--slate)] bg-white/80 backdrop-blur-md",
+        "px-6",
       )}
     >
-      {/* Left: Breadcrumb */}
-      <div className="flex h-full items-center">
-        {breadcrumbs.length > 0 ? (
-          <Breadcrumb>
-            <BreadcrumbList>
-              {breadcrumbs.map((crumb) => (
-                <BreadcrumbItem key={crumb.href}>
-                  {crumb.isLast ? (
-                    <BreadcrumbPage className="text-sm font-semibold text-foreground">
-                      {crumb.name}
-                    </BreadcrumbPage>
-                  ) : (
-                    <BreadcrumbLink
-                      href={crumb.href}
-                      className="text-sm text-muted-foreground transition-colors duration-150 hover:text-foreground"
-                    >
-                      {crumb.name}
-                    </BreadcrumbLink>
-                  )}
-                  {!crumb.isLast && <BreadcrumbSeparator />}
-                </BreadcrumbItem>
-              ))}
-            </BreadcrumbList>
-          </Breadcrumb>
-        ) : (
-          <div className="text-sm font-semibold text-foreground">
-            {title || "Dashboard"}
-          </div>
-        )}
+      {/* Left: Business name */}
+      <div className="flex items-center gap-3">
+        <span className="text-sm font-semibold text-[var(--ink)] font-[family-name:var(--font-dm-sans)]">
+          {tenant.name}
+        </span>
+        <span className="text-xs text-[var(--ash)] hidden sm:inline">
+          {tenant.plan} plan
+        </span>
       </div>
 
-      {/* Right: Search + Actions */}
-      <div className="flex h-full items-center gap-1">
-        {/* Command Search */}
-        <button
-          type="button"
-          onClick={onSearchClick}
-          className={cn(
-            "hidden sm:flex items-center gap-2.5 rounded-xl px-3.5 py-2 text-sm",
-            "border border-border bg-muted/50 text-muted-foreground",
-            "transition-all duration-150 ease-out",
-            "hover:border-border-strong hover:bg-muted hover:text-foreground",
-            "focus-visible:outline-2 focus-visible:outline-primary-light focus-visible:outline-offset-2",
-          )}
-        >
-          <Search size={15} strokeWidth={1.8} className="shrink-0 opacity-50" />
-          <span className="opacity-60">Search...</span>
-          <kbd
-            className={cn(
-              "ml-2 flex items-center gap-0.5 rounded-md border border-border/80",
-              "bg-card px-1.5 py-0.5 font-mono text-[10px] font-medium",
-              "text-muted-foreground/50",
-            )}
-          >
-            <span className="text-[11px]">&#8984;</span>K
-          </kbd>
-        </button>
-
-        <div className="mx-2 h-5 w-px bg-border" />
-
-        <NotificationButton />
-
-        <ThemeToggle />
-
-        <div className="mx-1 h-5 w-px bg-border" />
-
-        <Avatar className="h-8 w-8 cursor-pointer ring-2 ring-transparent transition-all duration-150 hover:ring-border-strong">
-          <AvatarImage src="/vercel.svg" alt="User" />
-          <AvatarFallback className="bg-muted text-xs font-semibold text-foreground">
-            AN
-          </AvatarFallback>
-        </Avatar>
+      {/* Right: User menu */}
+      <div className="flex items-center gap-2">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="flex items-center gap-2 rounded-md p-1 transition-colors hover:bg-hover-bg cursor-pointer">
+              <Avatar className="h-8 w-8">
+                <AvatarFallback className="bg-[var(--mist)] text-[var(--cedar)] text-xs font-semibold">
+                  {tenant.avatarInitials}
+                </AvatarFallback>
+              </Avatar>
+              <span className="text-sm text-[var(--ink)] hidden md:inline">{tenant.name}</span>
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuLabel className="font-normal">
+              <div className="flex flex-col space-y-0.5">
+                <p className="text-sm font-medium text-[var(--ink)]">{tenant.name}</p>
+                <p className="text-xs text-[var(--ash)]">@{tenant.handle}</p>
+              </div>
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem>
+              <User className="mr-2 h-4 w-4" />
+              Account
+            </DropdownMenuItem>
+            <DropdownMenuItem>
+              <Settings className="mr-2 h-4 w-4" />
+              Settings
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem className="text-[var(--ember)]">
+              <LogOut className="mr-2 h-4 w-4" />
+              Log out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </header>
   );

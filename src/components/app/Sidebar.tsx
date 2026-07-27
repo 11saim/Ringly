@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
-import { LogOut } from "lucide-react";
+import { LogOut, PanelLeftClose, PanelLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useSidebarCollapsed } from "@/hooks/use-sidebar-store";
@@ -46,22 +46,40 @@ export function Sidebar() {
   };
 
   const sidebarContent = (
-    <div className="flex h-full flex-col bg-sidebar-bg border-r border-sidebar-border/60">
-      {/* Logo + Workspace */}
+    <div className="flex h-full flex-col bg-white border-r border-[var(--slate)]">
+      {/* Logo + Agent Pulse */}
       <div className={cn("flex flex-col", collapsed ? "items-center px-2 pt-4" : "px-4 pt-4 pb-2")}>
         <div className={cn("flex items-center", collapsed ? "justify-center" : "w-full")}>
           <RinglyLogo size="md" collapsed={collapsed} />
         </div>
+
+        {/* Agent Pulse — signature element */}
+        {!collapsed && (
+          <div className="mt-3 flex items-center gap-2 rounded-md bg-[var(--mist)] px-3 py-2">
+            <div className="h-2.5 w-2.5 shrink-0 rounded-full bg-[var(--cedar)] animate-agent-pulse" />
+            <span className="text-xs text-[var(--ink)] truncate">Agent active</span>
+          </div>
+        )}
+        {collapsed && (
+          <div className="mt-2 flex justify-center">
+            <div className="h-2.5 w-2.5 rounded-full bg-[var(--cedar)] animate-agent-pulse" title="Agent active" />
+          </div>
+        )}
       </div>
 
-      {/* Navigation — no scroll, fits naturally */}
-      <nav className={cn("flex-1 px-3", collapsed ? "py-1" : "py-1")}>
+      {/* Navigation */}
+      <nav className={cn("flex-1 px-3", collapsed ? "py-1" : "py-2")}>
         {collapsed ? (
           <div className="flex flex-col items-center gap-0.5">
             {navSections.map((section) =>
               section.items.map((item) => (
-                <SidebarItem key={item.id} item={item} isActive={isActive(item.href)} collapsed={collapsed} />
-              ))
+                <SidebarItem
+                  key={item.id}
+                  item={item}
+                  isActive={isActive(item.href)}
+                  collapsed={collapsed}
+                />
+              )),
             )}
           </div>
         ) : (
@@ -69,13 +87,18 @@ export function Sidebar() {
             {navSections.map((section) => (
               <div key={section.id}>
                 <div className="mb-1.5 px-2">
-                  <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/40">
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--ash)]">
                     {section.label}
                   </span>
                 </div>
                 <div className="space-y-px">
                   {section.items.map((item) => (
-                    <SidebarItem key={item.id} item={item} isActive={isActive(item.href)} collapsed={collapsed} />
+                    <SidebarItem
+                      key={item.id}
+                      item={item}
+                      isActive={isActive(item.href)}
+                      collapsed={collapsed}
+                    />
                   ))}
                 </div>
               </div>
@@ -84,13 +107,32 @@ export function Sidebar() {
         )}
       </nav>
 
-      {/* Logout — pinned at bottom */}
-      <div className={cn("mt-auto border-t border-sidebar-border/40", collapsed ? "px-2 py-3" : "px-3 py-3")}>
+      {/* Collapse toggle + Logout — pinned at bottom */}
+      <div className={cn("mt-auto border-t border-[var(--slate)]", collapsed ? "px-2 py-3" : "px-3 py-3")}>
+        <button
+          onClick={() => setCollapsed(!collapsed)}
+          className={cn(
+            "flex w-full items-center gap-3 rounded-md text-sm font-medium text-[var(--ash)]",
+            "transition-colors duration-150",
+            "hover:bg-hover-bg hover:text-[var(--ink)]",
+            collapsed ? "justify-center px-0 py-2.5" : "px-3 py-2",
+          )}
+        >
+          {collapsed ? (
+            <PanelLeft size={18} strokeWidth={1.5} />
+          ) : (
+            <>
+              <PanelLeftClose size={18} strokeWidth={1.5} />
+              <span>Collapse</span>
+            </>
+          )}
+        </button>
+
         <button
           className={cn(
-            "flex w-full items-center gap-3 rounded-[10px] text-[13px] font-medium text-muted-foreground/45",
-            "transition-all duration-200 ease-[cubic-bezier(0.25,0.1,0.25,1)]",
-            "hover:bg-hover-bg hover:text-foreground/80",
+            "flex w-full items-center gap-3 rounded-md text-sm font-medium text-[var(--ash)]",
+            "transition-colors duration-150",
+            "hover:bg-hover-bg hover:text-[var(--ink)]",
             collapsed ? "justify-center px-0 py-2.5" : "px-3 py-2",
           )}
         >
@@ -109,11 +151,10 @@ export function Sidebar() {
           onClick={() => setMobileOpen(true)}
           className={cn(
             "fixed top-3 left-3 z-50 grid h-10 w-10 place-items-center",
-            "rounded-[12px] border border-border bg-card text-foreground",
-            "shadow-[var(--shadow-card)]",
-            "transition-all duration-200 ease-[cubic-bezier(0.25,0.1,0.25,1)]",
-            "hover:bg-hover-bg hover:shadow-[var(--shadow-card-hover)] hover:scale-[1.03]",
-            "active:scale-[0.97]",
+            "rounded-md border border-[var(--slate)] bg-white text-[var(--ink)]",
+            "shadow-sm",
+            "transition-all duration-150",
+            "hover:bg-hover-bg",
           )}
           aria-label="Open navigation"
         >
@@ -124,11 +165,11 @@ export function Sidebar() {
         {mobileOpen && (
           <>
             <div
-              className="fixed inset-0 z-40 bg-overlay/60 backdrop-blur-sm animate-backdrop-in"
+              className="fixed inset-0 z-40 bg-overlay/60 backdrop-blur-sm animate-fade-in"
               onClick={() => setMobileOpen(false)}
             />
             <aside
-              className="fixed inset-y-0 left-0 z-50 w-[296px] h-screen animate-slide-in-left"
+              className="fixed inset-y-0 left-0 z-50 w-[280px] h-screen animate-fade-in"
               style={{ willChange: "transform" }}
             >
               {sidebarContent}
@@ -141,13 +182,10 @@ export function Sidebar() {
 
   return (
     <aside
-      className={cn(
-        "fixed inset-y-0 left-0 z-40 flex h-screen flex-col group/sidebar",
-        "sidebar-transition",
-      )}
+      className="fixed inset-y-0 left-0 z-40 flex h-screen flex-col"
       style={{
-        width: collapsed ? 72 : 280,
-        transition: "width 220ms cubic-bezier(0.25,0.1,0.25,1)",
+        width: collapsed ? 64 : 240,
+        transition: "width 200ms ease-out",
         willChange: "width",
       }}
     >

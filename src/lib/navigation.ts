@@ -1,14 +1,12 @@
 import {
+  LayoutDashboard,
   Inbox,
-  Bot,
-  BookOpen,
-  Calendar,
-  ShoppingCart,
-  Package,
-  Scissors,
-  BarChart3,
-  CreditCard,
   Settings,
+  Users,
+  Calendar,
+  Megaphone,
+  Bot,
+  CreditCard,
   type LucideIcon,
 } from "lucide-react";
 
@@ -29,43 +27,29 @@ export interface NavSection {
 
 export const navSections: NavSection[] = [
   {
-    id: "communication",
-    label: "COMMUNICATION",
+    id: "main",
+    label: "MAIN",
     items: [
+      { id: "overview", label: "Overview", href: "/overview", icon: LayoutDashboard, shortcut: "G O" },
       { id: "inbox", label: "Inbox", href: "/inbox", icon: Inbox, shortcut: "G I", badge: 3 },
-    ],
-  },
-  {
-    id: "ai",
-    label: "AI",
-    items: [
-      { id: "agent", label: "AI Agent", href: "/agent", icon: Bot, shortcut: "G A" },
-      { id: "knowledge", label: "Knowledge Base", href: "/knowledge", icon: BookOpen, shortcut: "G K" },
     ],
   },
   {
     id: "business",
     label: "BUSINESS",
     items: [
-      { id: "bookings", label: "Bookings", href: "/bookings", icon: Calendar, shortcut: "G B" },
-      { id: "orders", label: "Orders", href: "/orders", icon: ShoppingCart, shortcut: "G O" },
-      { id: "products", label: "Products", href: "/products", icon: Package, shortcut: "G P" },
-      { id: "services", label: "Services", href: "/services", icon: Scissors, shortcut: "G S" },
-    ],
-  },
-  {
-    id: "reports",
-    label: "REPORTS",
-    items: [
-      { id: "analytics", label: "Analytics", href: "/analytics", icon: BarChart3, shortcut: "G X" },
+      { id: "settings", label: "Business Settings", href: "/settings", icon: Settings, shortcut: "G ," },
+      { id: "contacts", label: "Contacts", href: "/contacts", icon: Users, shortcut: "G C" },
+      { id: "bookings", label: "Bookings / Orders", href: "/bookings", icon: Calendar, shortcut: "G B" },
+      { id: "broadcasts", label: "Broadcasts", href: "/broadcasts", icon: Megaphone, shortcut: "G M" },
     ],
   },
   {
     id: "system",
     label: "SYSTEM",
     items: [
-      { id: "billing", label: "Billing", href: "/billing", icon: CreditCard, shortcut: "G B" },
-      { id: "settings", label: "Settings", href: "/settings", icon: Settings, shortcut: "G ," },
+      { id: "agent-preview", label: "Agent Preview", href: "/agent-preview", icon: Bot, shortcut: "G A" },
+      { id: "account", label: "Account & Billing", href: "/account", icon: CreditCard, shortcut: "G $" },
     ],
   },
 ];

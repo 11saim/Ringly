@@ -1,563 +1,1171 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { AppShell } from "@/components/app/AppShell";
-import { Sparkline } from "@/components/app/Sparkline";
-import { useCountUp } from "@/hooks/useCountUp";
-import { motion } from "framer-motion";
+import { useMemo, useState } from "react";
 import {
-  Calendar,
-  Search,
-  SlidersHorizontal,
-  ArrowUpDown,
-  Plus,
-  Clock,
-  CheckCircle2,
-  XCircle,
+  Calendar as CalendarIcon,
+  CalendarDays,
   ChevronLeft,
   ChevronRight,
-  MoreHorizontal,
-  CalendarDays,
+  Edit,
+  Filter,
+  List,
+  Package,
+  Plus,
+  Scissors,
+  Trash2,
+  X,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import {
+  mockBookings,
+  mockOrders,
+  mockServices,
+  mockProducts,
+  type Booking,
+  type Order,
+} from "@/lib/data";
 import { cn } from "@/lib/utils";
 
-/* ── Design Tokens ── */
+// ── Helpers ──
 
-const CARD = "rounded-[16px] border border-border/30 bg-card shadow-[var(--shadow-card)]";
-const CARD_HEADER = "px-5 py-3.5 border-b border-border/25";
-const SECTION_GAP = "space-y-5";
-
-/* ── Animation Variants ── */
-
-const stagger = {
-  hidden: { opacity: 0 },
-  show: { opacity: 1, transition: { staggerChildren: 0.04, delayChildren: 0.06 } },
+const statusColors: Record<string, string> = {
+  upcoming: "border-[var(--cedar)] bg-[var(--mist)] text-[var(--cedar)]",
+  completed: "border-[var(--slate)] bg-[var(--linen)] text-[var(--ash)]",
+  cancelled: "border-[var(--ember)] bg-[var(--ember)]/10 text-[var(--ember)]",
+  pending: "border-[var(--amber)] bg-[var(--amber)]/10 text-[var(--amber)]",
+  confirmed: "border-[var(--cedar)] bg-[var(--mist)] text-[var(--cedar)]",
+  fulfilled: "border-[var(--slate)] bg-[var(--linen)] text-[var(--ash)]",
 };
 
-const fadeUp = {
-  hidden: { opacity: 0, y: 6 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.2, ease: [0.25, 0.46, 0.45, 0.94] as const } },
-};
+const bookingStatuses = ["all", "upcoming", "completed", "cancelled"] as const;
+const orderStatuses = ["all", "pending", "confirmed", "fulfilled", "cancelled"] as const;
 
-/* ── Data ── */
-
-type BookingStatus = "Confirmed" | "Pending" | "Cancelled";
-
-interface Booking {
-  id: string;
-  customer: string;
-  initials: string;
-  service: string;
-  date: string;
-  time: string;
-  status: BookingStatus;
-  assigned: string;
+function formatDate(d: string) {
+  const date = new Date(d + "T00:00:00");
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-const bookings: Booking[] = [
-  { id: "b1", customer: "Ahmed Khan", initials: "AK", service: "Hair Coloring", date: "Today", time: "10:00 AM", status: "Confirmed", assigned: "Ana" },
-  { id: "b2", customer: "Fatima Rashid", initials: "FR", service: "Hair Cut", date: "Today", time: "11:30 AM", status: "Pending", assigned: "Luis" },
-  { id: "b3", customer: "Sofia Martinez", initials: "SM", service: "Balayage", date: "Today", time: "1:00 PM", status: "Confirmed", assigned: "Ana" },
-  { id: "b4", customer: "James Lee", initials: "JL", service: "Beard Trim", date: "Today", time: "2:30 PM", status: "Confirmed", assigned: "Camila" },
-  { id: "b5", customer: "Layla Hassan", initials: "LH", service: "Blowout", date: "Today", time: "3:00 PM", status: "Pending", assigned: "Ana" },
-  { id: "b6", customer: "Omar Siddiqui", initials: "OS", service: "Hair Treatment", date: "Tomorrow", time: "9:00 AM", status: "Confirmed", assigned: "Luis" },
-  { id: "b7", customer: "Nour Al-Rashid", initials: "NR", service: "Women's Haircut", date: "Tomorrow", time: "10:30 AM", status: "Pending", assigned: "Ana" },
-  { id: "b8", customer: "Maria Garcia", initials: "MG", service: "Color Touch-up", date: "Tomorrow", time: "11:00 AM", status: "Cancelled", assigned: "Camila" },
-  { id: "b9", customer: "Ali Nagi", initials: "AN", service: "Men's Haircut", date: "Jul 28", time: "9:00 AM", status: "Confirmed", assigned: "Luis" },
-  { id: "b10", customer: "Kenji Park", initials: "KP", service: "Deep Conditioning", date: "Jul 28", time: "2:00 PM", status: "Confirmed", assigned: "Ana" },
-  { id: "b11", customer: "Priya Shah", initials: "PS", service: "Bridal Package", date: "Jul 29", time: "9:00 AM", status: "Confirmed", assigned: "Ana" },
-  { id: "b12", customer: "Diego Alvarez", initials: "DA", service: "Men's Haircut", date: "Jul 29", time: "11:00 AM", status: "Pending", assigned: "Camila" },
-];
+// ── Section Heading ──
 
-const todaySchedule = [
-  { time: "10:00 AM", customer: "Ahmed Khan", service: "Hair Coloring", status: "Confirmed" as const },
-  { time: "11:30 AM", customer: "Fatima Rashid", service: "Hair Cut", status: "Pending" as const },
-  { time: "1:00 PM", customer: "Sofia Martinez", service: "Balayage", status: "Confirmed" as const },
-  { time: "2:30 PM", customer: "James Lee", service: "Beard Trim", status: "Confirmed" as const },
-  { time: "3:00 PM", customer: "Layla Hassan", service: "Blowout", status: "Pending" as const },
-];
-
-const statusBreakdown = [
-  { label: "Confirmed", count: 7, color: "text-success" },
-  { label: "Pending", count: 4, color: "text-[#c98a1a]" },
-  { label: "Cancelled", count: 1, color: "text-destructive" },
-];
-
-const ITEMS_PER_PAGE = 10;
-
-/* ── Stat Card ── */
-
-function StatCard({
-  label,
-  value,
-  suffix,
-  trend,
-  trendUp,
-  sparkline,
-  color,
-  icon,
+function SectionHeading({
+  icon: Icon,
+  title,
+  description,
 }: {
-  label: string;
-  value: number;
-  suffix?: string;
-  trend: string;
-  trendUp: boolean;
-  sparkline: number[];
-  color: string;
   icon: React.ElementType;
+  title: string;
+  description: string;
 }) {
-  const count = useCountUp(value, 1400);
-  const Icon = icon;
-
   return (
-    <motion.div
-      variants={fadeUp}
-      whileHover={{ y: -2, transition: { duration: 0.15 } }}
-      className={cn(
-        CARD,
-        "p-5 cursor-default transition-all duration-150",
-        "hover:shadow-[var(--shadow-card-hover)] hover:border-border/50",
-      )}
-    >
-      <div className="flex items-center justify-between mb-3">
-        <span className="text-[11px] font-semibold text-muted-foreground/50 tracking-widest uppercase">
-          {label}
-        </span>
-        <div className="flex h-7 w-7 items-center justify-center rounded-[8px] bg-muted/50">
-          <Icon size={14} strokeWidth={1.8} className="text-muted-foreground/40" />
-        </div>
+    <div className="flex items-start gap-3 mb-4">
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[var(--mist)] text-[var(--cedar)]">
+        <Icon className="h-4 w-4" />
       </div>
-      <div className="flex items-end justify-between">
-        <div>
-          <div className="text-[32px] font-bold text-foreground tracking-[-0.03em] leading-none tabular-nums">
-            {count.toLocaleString()}{suffix ?? ""}
-          </div>
-          <div className="mt-1.5 flex items-center gap-1.5">
-            <span className={cn("text-[11px] font-semibold", trendUp ? "text-success" : "text-destructive")}>
-              {trend}
-            </span>
-          </div>
-        </div>
-        <Sparkline data={sparkline} color={color} />
+      <div>
+        <h3 className="text-sm font-semibold text-[var(--ink)] font-[family-name:var(--font-dm-sans)]">
+          {title}
+        </h3>
+        <p className="text-xs text-[var(--ash)] mt-0.5">{description}</p>
       </div>
-    </motion.div>
+    </div>
   );
 }
 
-/* ── Page ── */
+// ── Booking Dialog ──
 
-export default function BookingsPage() {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | BookingStatus>("all");
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
-  const [currentPage, setCurrentPage] = useState(1);
-  const [hoveredRow, setHoveredRow] = useState<number | null>(null);
-  const [showFilters, setShowFilters] = useState(false);
-
-  const filtered = useMemo(() => {
-    let result = bookings.filter((b) => {
-      const matchesSearch = searchQuery
-        ? b.customer.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          b.service.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          b.assigned.toLowerCase().includes(searchQuery.toLowerCase())
-        : true;
-      const matchesStatus = statusFilter === "all" || b.status === statusFilter;
-      return matchesSearch && matchesStatus;
-    });
-
-    if (sortOrder === "desc") {
-      result = [...result].reverse();
-    }
-
-    return result;
-  }, [searchQuery, statusFilter, sortOrder]);
-
-  const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
-  const paginated = filtered.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE
+function BookingDialog({
+  open,
+  onOpenChange,
+  booking,
+  onSave,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  booking: Booking | null;
+  onSave: (data: Omit<Booking, "id">) => void;
+}) {
+  const [form, setForm] = useState<Omit<Booking, "id">>(
+    booking ?? {
+      customer: "",
+      service: "",
+      staff: "",
+      date: new Date().toISOString().slice(0, 10),
+      time: "10:00 AM",
+      status: "upcoming",
+      notes: "",
+    },
   );
 
-  return (
-    <AppShell fullWidth>
-      <div className={SECTION_GAP}>
-        {/* ── PAGE HEADER ── */}
-        <motion.div
-          initial={{ opacity: 0, y: -4 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.25 }}
-          className="flex items-end justify-between"
-        >
-          <div>
-            <h1 className="text-[28px] font-bold text-foreground tracking-[-0.02em] leading-none">
-              Bookings
-            </h1>
-            <p className="mt-1 text-[13px] text-muted-foreground/50">
-              Manage appointments and booking schedule.
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className={cn(
-                "inline-flex items-center gap-2 rounded-[10px] px-3.5 py-2 text-[13px] font-medium",
-                "border border-border/50 bg-card text-foreground/70",
-                "transition-all duration-150 hover:bg-hover-bg hover:text-foreground hover:border-border/80",
-                showFilters && "bg-hover-bg text-foreground border-border/80",
-              )}
-            >
-              <Search size={14} strokeWidth={1.8} />
-              Search
-            </button>
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className={cn(
-                "inline-flex items-center gap-2 rounded-[10px] px-3.5 py-2 text-[13px] font-medium",
-                "border border-border/50 bg-card text-foreground/70",
-                "transition-all duration-150 hover:bg-hover-bg hover:text-foreground hover:border-border/80",
-                showFilters && "bg-hover-bg text-foreground border-border/80",
-              )}
-            >
-              <SlidersHorizontal size={14} strokeWidth={1.8} />
-              Filter
-            </button>
-            <button
-              onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
-              className={cn(
-                "inline-flex items-center gap-2 rounded-[10px] px-3.5 py-2 text-[13px] font-medium",
-                "border border-border/50 bg-card text-foreground/70",
-                "transition-all duration-150 hover:bg-hover-bg hover:text-foreground hover:border-border/80",
-              )}
-            >
-              <ArrowUpDown size={14} strokeWidth={1.8} />
-              Sort
-            </button>
-            <button
-              className={cn(
-                "inline-flex items-center gap-2 rounded-[10px] px-3.5 py-2 text-[13px] font-semibold",
-                "bg-accent text-white transition-all duration-150",
-                "hover:bg-accent-hover",
-              )}
-            >
-              <Plus size={14} strokeWidth={2} />
-              New Booking
-            </button>
-          </div>
-        </motion.div>
+  const update = (field: string, value: unknown) =>
+    setForm((prev) => ({ ...prev, [field]: value }));
 
-        {/* ── FILTERS ── */}
-        {showFilters && (
-          <motion.div
-            initial={{ opacity: 0, y: -4 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.15 }}
-            className="flex items-center gap-3"
-          >
-            <div className="relative">
-              <Search size={14} strokeWidth={1.5} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/40" />
-              <input
-                type="text"
-                placeholder="Search by customer, service, or staff..."
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setCurrentPage(1);
-                }}
-                className="w-[320px] h-[36px] rounded-[10px] border border-border/40 bg-muted/30 pl-9 pr-3 text-[13px] text-foreground placeholder:text-muted-foreground/40 transition-all duration-150 focus:outline-none focus:border-border/60 focus:bg-muted/50"
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>{booking ? "Edit Booking" : "New Booking"}</DialogTitle>
+          <DialogDescription>
+            {booking
+              ? "Update the appointment details below."
+              : "Create a new appointment."}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label>Customer</Label>
+              <Input
+                value={form.customer}
+                onChange={(e) => update("customer", e.target.value)}
+                placeholder="e.g. Sarah Ahmed"
               />
             </div>
-            <div className="flex items-center gap-1.5">
-              {(["all", "Confirmed", "Pending", "Cancelled"] as const).map((status) => (
-                <button
-                  key={status}
-                  onClick={() => {
-                    setStatusFilter(status);
-                    setCurrentPage(1);
-                  }}
-                  className={cn(
-                    "h-[36px] rounded-[10px] px-3 text-[13px] font-medium transition-all duration-150",
-                    statusFilter === status
-                      ? "bg-foreground/5 text-foreground border border-border/40"
-                      : "text-muted-foreground/50 hover:text-foreground hover:bg-hover-bg",
-                  )}
-                >
-                  {status === "all" ? "All" : status}
-                </button>
-              ))}
-            </div>
-          </motion.div>
-        )}
-
-        {/* ── STAT CARDS ── */}
-        <motion.div variants={stagger} initial="hidden" animate="show" className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard
-            label="Total Bookings"
-            value={12}
-            trend="+3 this week"
-            trendUp
-            sparkline={[4, 6, 5, 8, 7, 9, 10, 8, 11, 10, 12, 12]}
-            color="#6366f1"
-            icon={Calendar}
-          />
-          <StatCard
-            label="Today's Bookings"
-            value={5}
-            trend="On track"
-            trendUp
-            sparkline={[2, 3, 2, 4, 3, 5, 4, 5, 5, 4, 5, 5]}
-            color="#22c55e"
-            icon={CalendarDays}
-          />
-          <StatCard
-            label="Upcoming"
-            value={7}
-            trend="Next 7 days"
-            trendUp
-            sparkline={[3, 4, 5, 4, 6, 5, 7, 6, 7, 7, 7, 7]}
-            color="#8b5cf6"
-            icon={Clock}
-          />
-          <StatCard
-            label="Completed"
-            value={24}
-            trend="+8 this week"
-            trendUp
-            sparkline={[10, 12, 14, 15, 17, 18, 19, 20, 21, 22, 23, 24]}
-            color="#f59e0b"
-            icon={CheckCircle2}
-          />
-        </motion.div>
-
-        {/* ── MAIN CONTENT ── */}
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_300px]">
-          {/* ── Bookings Table ── */}
-          <motion.div
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.25, delay: 0.1 }}
-            className={cn(CARD, "flex flex-col overflow-hidden")}
-          >
-            <div className={cn(CARD_HEADER, "flex items-center justify-between")}>
-              <div className="flex items-center gap-2">
-                <h2 className="text-[13px] font-semibold text-foreground">All Bookings</h2>
-                <span className="flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-muted px-1.5 text-[10px] font-medium text-muted-foreground/60 tabular-nums">
-                  {filtered.length}
-                </span>
-              </div>
-              <span className="text-[11px] text-muted-foreground/40">
-                Showing {paginated.length} of {filtered.length}
-              </span>
-            </div>
-
-            <div className="overflow-x-auto flex-1">
-              <table className="w-full">
-                <thead className="sticky top-0 bg-card z-10">
-                  <tr className="border-b border-border/25">
-                    <th className="px-5 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/40">Customer</th>
-                    <th className="px-5 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/40">Service</th>
-                    <th className="px-5 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/40">Date</th>
-                    <th className="px-5 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/40">Time</th>
-                    <th className="px-5 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/40">Status</th>
-                    <th className="px-5 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/40">Assigned</th>
-                    <th className="px-5 py-2.5 w-[60px] text-left text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/40" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {paginated.map((booking, i) => (
-                    <motion.tr
-                      key={booking.id}
-                      variants={fadeUp}
-                      onMouseEnter={() => setHoveredRow(i)}
-                      onMouseLeave={() => setHoveredRow(null)}
-                      className={cn(
-                        "border-b border-border/15 transition-all duration-150 cursor-pointer",
-                        hoveredRow === i && "bg-hover-bg/50",
-                      )}
-                    >
-                      <td className="px-5 py-3">
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-[11px] font-semibold text-foreground/60">
-                            {booking.initials}
-                          </div>
-                          <span className="text-[13px] font-semibold text-foreground">{booking.customer}</span>
-                        </div>
-                      </td>
-                      <td className="px-5 py-3">
-                        <span className="text-[12px] text-muted-foreground/55">{booking.service}</span>
-                      </td>
-                      <td className="px-5 py-3">
-                        <span className="text-[12px] text-muted-foreground/55">{booking.date}</span>
-                      </td>
-                      <td className="px-5 py-3">
-                        <span className="text-[12px] font-medium text-foreground/70 tabular-nums">{booking.time}</span>
-                      </td>
-                      <td className="px-5 py-3">
-                        <span
-                          className={cn(
-                            "inline-flex h-[18px] items-center gap-1 rounded-full px-2 text-[10px] font-semibold tracking-wide",
-                            booking.status === "Confirmed" && "bg-success/[0.08] text-success",
-                            booking.status === "Pending" && "bg-[rgba(217,119,6,0.1)] text-[#c98a1a]",
-                            booking.status === "Cancelled" && "bg-destructive/[0.08] text-destructive",
-                          )}
-                        >
-                          {booking.status === "Confirmed" && <CheckCircle2 size={9} strokeWidth={2} />}
-                          {booking.status === "Pending" && <Clock size={9} strokeWidth={2} />}
-                          {booking.status === "Cancelled" && <XCircle size={9} strokeWidth={2} />}
-                          {booking.status}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3">
-                        <span className="text-[12px] text-muted-foreground/55">{booking.assigned}</span>
-                      </td>
-                      <td className="px-5 py-3 w-[60px]">
-                        <div className={cn(
-                          "flex items-center gap-1 transition-opacity duration-150",
-                          hoveredRow === i ? "opacity-100" : "opacity-0",
-                        )}>
-                          <button className="flex h-7 w-7 items-center justify-center rounded-[6px] text-muted-foreground/40 transition-all hover:bg-hover-bg hover:text-foreground">
-                            <MoreHorizontal size={12} strokeWidth={1.5} />
-                          </button>
-                        </div>
-                      </td>
-                    </motion.tr>
+            <div className="space-y-1.5">
+              <Label>Service</Label>
+              <Select
+                value={form.service}
+                onValueChange={(v) => update("service", v)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select service" />
+                </SelectTrigger>
+                <SelectContent>
+                  {mockServices.map((s) => (
+                    <SelectItem key={s.id} value={s.name}>
+                      {s.name}
+                    </SelectItem>
                   ))}
-                </tbody>
-              </table>
+                </SelectContent>
+              </Select>
             </div>
-
-            {filtered.length === 0 && (
-              <div className="flex flex-col items-center justify-center py-16 text-center">
-                <div className="flex h-14 w-14 items-center justify-center rounded-[16px] bg-muted/50 mb-4">
-                  <Calendar size={22} strokeWidth={1.5} className="text-muted-foreground/25" />
-                </div>
-                <p className="text-[13px] font-semibold text-foreground/60 mb-1">No bookings found</p>
-                <p className="text-[12px] text-muted-foreground/40 max-w-[200px] leading-relaxed">
-                  {searchQuery ? "Try adjusting your search." : "Create your first booking to get started."}
-                </p>
-              </div>
-            )}
-
-            {/* ── Pagination ── */}
-            {filtered.length > ITEMS_PER_PAGE && (
-              <div className={cn(CARD_HEADER, "border-t border-border/25 flex items-center justify-between")}>
-                <span className="text-[11px] text-muted-foreground/40">
-                  Page {currentPage} of {totalPages}
-                </span>
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                    disabled={currentPage === 1}
-                    className={cn(
-                      "flex h-7 w-7 items-center justify-center rounded-[6px] transition-all duration-150",
-                      currentPage === 1
-                        ? "text-muted-foreground/25 cursor-not-allowed"
-                        : "text-muted-foreground/50 hover:bg-hover-bg hover:text-foreground",
-                    )}
-                  >
-                    <ChevronLeft size={14} strokeWidth={1.8} />
-                  </button>
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                    <button
-                      key={page}
-                      onClick={() => setCurrentPage(page)}
-                      className={cn(
-                        "flex h-7 w-7 items-center justify-center rounded-[6px] text-[12px] font-medium transition-all duration-150",
-                        page === currentPage
-                          ? "bg-foreground/5 text-foreground"
-                          : "text-muted-foreground/50 hover:bg-hover-bg hover:text-foreground",
-                      )}
-                    >
-                      {page}
-                    </button>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label>Staff</Label>
+              <Select
+                value={form.staff}
+                onValueChange={(v) => update("staff", v)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select staff" />
+                </SelectTrigger>
+                <SelectContent>
+                  {["Sarah A.", "Ali K.", "Maria G.", "Priya P."].map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {s}
+                    </SelectItem>
                   ))}
-                  <button
-                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                    disabled={currentPage === totalPages}
-                    className={cn(
-                      "flex h-7 w-7 items-center justify-center rounded-[6px] transition-all duration-150",
-                      currentPage === totalPages
-                        ? "text-muted-foreground/25 cursor-not-allowed"
-                        : "text-muted-foreground/50 hover:bg-hover-bg hover:text-foreground",
-                    )}
-                  >
-                    <ChevronRight size={14} strokeWidth={1.8} />
-                  </button>
-                </div>
-              </div>
-            )}
-          </motion.div>
-
-          {/* ── Right Sidebar ── */}
-          <div className="space-y-4">
-            {/* Today's Schedule */}
-            <motion.div
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.25, delay: 0.15 }}
-              className={cn(CARD, "overflow-hidden")}
-            >
-              <div className={CARD_HEADER}>
-                <h2 className="text-[13px] font-semibold text-foreground">Today&apos;s Schedule</h2>
-              </div>
-              <div>
-                {todaySchedule.map((item, i) => (
-                  <div
-                    key={`${item.customer}-${item.time}`}
-                    className={cn(
-                      "px-5 py-3 transition-colors duration-150 hover:bg-hover-bg/50",
-                      i < todaySchedule.length - 1 && "border-b border-border/15",
-                    )}
-                  >
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-[12px] font-semibold text-foreground/80 tabular-nums">{item.time}</span>
-                      <span
-                        className={cn(
-                          "inline-flex h-[16px] items-center rounded-full px-1.5 text-[9px] font-semibold tracking-wide",
-                          item.status === "Confirmed"
-                            ? "bg-success/[0.08] text-success"
-                            : "bg-[rgba(217,119,6,0.1)] text-[#c98a1a]",
-                        )}
-                      >
-                        {item.status}
-                      </span>
-                    </div>
-                    <p className="text-[13px] font-medium text-foreground">{item.customer}</p>
-                    <p className="text-[11px] text-muted-foreground/45 mt-0.5">{item.service}</p>
-                  </div>
-                ))}
-              </div>
-            </motion.div>
-
-            {/* Booking Status */}
-            <motion.div
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.25, delay: 0.2 }}
-              className={cn(CARD, "overflow-hidden")}
-            >
-              <div className={CARD_HEADER}>
-                <h2 className="text-[13px] font-semibold text-foreground">Booking Status</h2>
-              </div>
-              <div className="p-5 space-y-3">
-                {statusBreakdown.map((item, i) => (
-                  <div
-                    key={item.label}
-                    className={cn(
-                      "flex items-center justify-between",
-                      i < statusBreakdown.length - 1 && "pb-3 border-b border-border/15",
-                    )}
-                  >
-                    <span className="text-[13px] text-foreground/70">{item.label}</span>
-                    <span className={cn("text-[16px] font-bold tabular-nums", item.color)}>
-                      {item.count}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </motion.div>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Status</Label>
+              <Select
+                value={form.status}
+                onValueChange={(v) =>
+                  update("status", v as Booking["status"])
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="upcoming">Upcoming</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label>Date</Label>
+              <Input
+                type="date"
+                value={form.date}
+                onChange={(e) => update("date", e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Time</Label>
+              <Input
+                value={form.time}
+                onChange={(e) => update("time", e.target.value)}
+                placeholder="e.g. 10:00 AM"
+              />
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Notes (optional)</Label>
+            <Input
+              value={form.notes ?? ""}
+              onChange={(e) => update("notes", e.target.value)}
+              placeholder="Internal notes about this booking"
+            />
           </div>
         </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button
+            onClick={() => {
+              onSave(form);
+              onOpenChange(false);
+            }}
+            disabled={!form.customer || !form.service}
+          >
+            {booking ? "Save changes" : "Create booking"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ── Order Dialog ──
+
+function OrderDialog({
+  open,
+  onOpenChange,
+  order,
+  onSave,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  order: Order | null;
+  onSave: (data: Omit<Order, "id">) => void;
+}) {
+  const [form, setForm] = useState<Omit<Order, "id">>(
+    order ?? {
+      customer: "",
+      products: [{ name: "", qty: 1, price: 0 }],
+      total: 0,
+      date: new Date().toISOString().slice(0, 10),
+      status: "pending",
+    },
+  );
+
+  const update = (field: string, value: unknown) =>
+    setForm((prev) => ({ ...prev, [field]: value }));
+
+  const updateProduct = (idx: number, field: string, value: unknown) =>
+    setForm((prev) => {
+      const products = [...prev.products];
+      products[idx] = { ...products[idx], [field]: value };
+      const total = products.reduce((sum, p) => sum + p.price * p.qty, 0);
+      return { ...prev, products, total };
+    });
+
+  const addProduct = () =>
+    setForm((prev) => ({
+      ...prev,
+      products: [...prev.products, { name: "", qty: 1, price: 0 }],
+    }));
+
+  const removeProduct = (idx: number) =>
+    setForm((prev) => {
+      const products = prev.products.filter((_, i) => i !== idx);
+      const total = products.reduce((sum, p) => sum + p.price * p.qty, 0);
+      return { ...prev, products, total };
+    });
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{order ? "Edit Order" : "New Order"}</DialogTitle>
+          <DialogDescription>
+            {order
+              ? "Update the order details below."
+              : "Create a new order."}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label>Customer</Label>
+              <Input
+                value={form.customer}
+                onChange={(e) => update("customer", e.target.value)}
+                placeholder="e.g. James Wilson"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Date</Label>
+              <Input
+                type="date"
+                value={form.date}
+                onChange={(e) => update("date", e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Status</Label>
+            <Select
+              value={form.status}
+              onValueChange={(v) => update("status", v as Order["status"])}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="confirmed">Confirmed</SelectItem>
+                <SelectItem value="fulfilled">Fulfilled</SelectItem>
+                <SelectItem value="cancelled">Cancelled</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <Separator />
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label>Products</Label>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={addProduct}
+                className="gap-1 h-7 text-xs"
+              >
+                <Plus className="h-3 w-3" />
+                Add item
+              </Button>
+            </div>
+            {form.products.map((p, idx) => (
+              <div key={idx} className="flex items-end gap-2">
+                <div className="flex-1 space-y-1.5">
+                  {idx === 0 && <Label className="text-[10px]">Product</Label>}
+                  <Select
+                    value={p.name}
+                    onValueChange={(v) => {
+                      const prod = mockProducts.find((mp) => mp.name === v);
+                      updateProduct(idx, "name", v);
+                      if (prod) updateProduct(idx, "price", prod.price);
+                    }}
+                  >
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="Select product" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {mockProducts.map((mp) => (
+                        <SelectItem key={mp.id} value={mp.name}>
+                          {mp.name} — ${mp.price}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="w-16 space-y-1.5">
+                  {idx === 0 && <Label className="text-[10px]">Qty</Label>}
+                  <Input
+                    type="number"
+                    min={1}
+                    value={p.qty}
+                    onChange={(e) =>
+                      updateProduct(idx, "qty", Number(e.target.value))
+                    }
+                    className="h-9"
+                  />
+                </div>
+                <div className="w-20 space-y-1.5">
+                  {idx === 0 && <Label className="text-[10px]">Price</Label>}
+                  <Input
+                    type="number"
+                    value={p.price}
+                    onChange={(e) =>
+                      updateProduct(idx, "price", Number(e.target.value))
+                    }
+                    className="h-9 font-[family-name:var(--font-jetbrains-mono)]"
+                  />
+                </div>
+                {form.products.length > 1 && (
+                  <button
+                    onClick={() => removeProduct(idx)}
+                    className="p-1.5 rounded hover:bg-hover-bg transition-colors mb-0.5"
+                  >
+                    <Trash2 className="h-3.5 w-3.5 text-[var(--ember)]" />
+                  </button>
+                )}
+              </div>
+            ))}
+            <div className="flex justify-end pt-1">
+              <span className="text-sm font-semibold text-[var(--ink)] font-[family-name:var(--font-jetbrains-mono)]">
+                Total: ${form.total}
+              </span>
+            </div>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button
+            onClick={() => {
+              onSave(form);
+              onOpenChange(false);
+            }}
+            disabled={!form.customer || form.products.length === 0}
+          >
+            {order ? "Save changes" : "Create order"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ── Calendar View (Service) ──
+
+function BookingCalendar({
+  bookings,
+  onSelectDate,
+}: {
+  bookings: Booking[];
+  onSelectDate: (date: string) => void;
+}) {
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+
+  const year = currentMonth.getFullYear();
+  const month = currentMonth.getMonth();
+
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  const today = new Date();
+  const todayStr = today.toISOString().slice(0, 10);
+
+  const bookingsByDate = useMemo(() => {
+    const map: Record<string, Booking[]> = {};
+    for (const b of bookings) {
+      if (!map[b.date]) map[b.date] = [];
+      map[b.date].push(b);
+    }
+    return map;
+  }, [bookings]);
+
+  const monthLabel = currentMonth.toLocaleDateString("en-US", {
+    month: "long",
+    year: "numeric",
+  });
+
+  const cells: (number | null)[] = [];
+  for (let i = 0; i < firstDay; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+
+  return (
+    <Card>
+      <CardContent className="p-5">
+        <div className="flex items-center justify-between mb-4">
+          <h4 className="text-sm font-semibold text-[var(--ink)] font-[family-name:var(--font-dm-sans)]">
+            {monthLabel}
+          </h4>
+          <div className="flex gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() =>
+                setCurrentMonth(new Date(year, month - 1, 1))
+              }
+              className="h-7 w-7 p-0"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() =>
+                setCurrentMonth(new Date(year, month + 1, 1))
+              }
+              className="h-7 w-7 p-0"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-7 gap-px text-[10px] font-medium text-[var(--ash)] mb-1">
+          {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
+            <div key={d} className="text-center py-1">
+              {d}
+            </div>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-7 gap-px">
+          {cells.map((day, i) => {
+            if (day === null)
+              return <div key={`empty-${i}`} className="min-h-[72px]" />;
+
+            const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+            const dayBookings = bookingsByDate[dateStr] ?? [];
+            const isToday = dateStr === todayStr;
+
+            return (
+              <button
+                key={day}
+                onClick={() => onSelectDate(dateStr)}
+                className={cn(
+                  "min-h-[72px] rounded-md border border-transparent p-1.5 text-left transition-colors hover:border-[var(--slate)] hover:bg-[var(--linen)]",
+                  isToday && "border-[var(--cedar)] bg-[var(--mist)]",
+                )}
+              >
+                <span
+                  className={cn(
+                    "text-xs font-medium",
+                    isToday
+                      ? "text-[var(--cedar)] font-semibold"
+                      : "text-[var(--ink)]",
+                  )}
+                >
+                  {day}
+                </span>
+                <div className="mt-1 space-y-0.5">
+                  {dayBookings.slice(0, 3).map((b) => (
+                    <div
+                      key={b.id}
+                      className={cn(
+                        "truncate rounded px-1 py-0.5 text-[9px] font-medium",
+                        b.status === "upcoming" &&
+                          "bg-[var(--mist)] text-[var(--cedar)]",
+                        b.status === "completed" &&
+                          "bg-[var(--linen)] text-[var(--ash)]",
+                        b.status === "cancelled" &&
+                          "bg-red-50 text-[var(--ember)]",
+                      )}
+                    >
+                      {b.time} {b.customer.split(" ")[0]}
+                    </div>
+                  ))}
+                  {dayBookings.length > 3 && (
+                    <span className="text-[9px] text-[var(--ash)]">
+                      +{dayBookings.length - 3} more
+                    </span>
+                  )}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Main Page ──
+
+export default function BookingsPage() {
+  // Dev toggle — in production this comes from useTenant().businessType
+  const [variant, setVariant] = useState<"service" | "product">("service");
+
+  // ── Bookings state ──
+  const [bookings, setBookings] = useState(mockBookings);
+  const [bookingStatusFilter, setBookingStatusFilter] = useState<string>("all");
+  const [bookingDateFrom, setBookingDateFrom] = useState("");
+  const [bookingDateTo, setBookingDateTo] = useState("");
+  const [bookingView, setBookingView] = useState<"table" | "calendar">("table");
+  const [bookingDialogOpen, setBookingDialogOpen] = useState(false);
+  const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
+
+  // ── Orders state ──
+  const [orders, setOrders] = useState(mockOrders);
+  const [orderStatusFilter, setOrderStatusFilter] = useState<string>("all");
+  const [orderDateFrom, setOrderDateFrom] = useState("");
+  const [orderDateTo, setOrderDateTo] = useState("");
+  const [orderDialogOpen, setOrderDialogOpen] = useState(false);
+  const [editingOrder, setEditingOrder] = useState<Order | null>(null);
+
+  // ── Filtered data ──
+
+  const filteredBookings = useMemo(() => {
+    return bookings.filter((b) => {
+      if (bookingStatusFilter !== "all" && b.status !== bookingStatusFilter)
+        return false;
+      if (bookingDateFrom && b.date < bookingDateFrom) return false;
+      if (bookingDateTo && b.date > bookingDateTo) return false;
+      return true;
+    });
+  }, [bookings, bookingStatusFilter, bookingDateFrom, bookingDateTo]);
+
+  const filteredOrders = useMemo(() => {
+    return orders.filter((o) => {
+      if (orderStatusFilter !== "all" && o.status !== orderStatusFilter)
+        return false;
+      if (orderDateFrom && o.date < orderDateFrom) return false;
+      if (orderDateTo && o.date > orderDateTo) return false;
+      return true;
+    });
+  }, [orders, orderStatusFilter, orderDateFrom, orderDateTo]);
+
+  // ── Booking CRUD ──
+
+  const saveBooking = (data: Omit<Booking, "id">) => {
+    if (editingBooking) {
+      setBookings((prev) =>
+        prev.map((b) =>
+          b.id === editingBooking.id ? { ...data, id: b.id } : b,
+        ),
+      );
+    } else {
+      setBookings((prev) => [
+        ...prev,
+        { ...data, id: `b-${Date.now()}` },
+      ]);
+    }
+    setEditingBooking(null);
+  };
+
+  const deleteBooking = (id: string) =>
+    setBookings((prev) => prev.filter((b) => b.id !== id));
+
+  // ── Order CRUD ──
+
+  const saveOrder = (data: Omit<Order, "id">) => {
+    if (editingOrder) {
+      setOrders((prev) =>
+        prev.map((o) =>
+          o.id === editingOrder.id ? { ...data, id: o.id } : o,
+        ),
+      );
+    } else {
+      setOrders((prev) => [
+        ...prev,
+        { ...data, id: `o-${Date.now()}` },
+      ]);
+    }
+    setEditingOrder(null);
+  };
+
+  const deleteOrder = (id: string) =>
+    setOrders((prev) => prev.filter((o) => o.id !== id));
+
+  const clearBookingFilters = () => {
+    setBookingStatusFilter("all");
+    setBookingDateFrom("");
+    setBookingDateTo("");
+  };
+
+  const clearOrderFilters = () => {
+    setOrderStatusFilter("all");
+    setOrderDateFrom("");
+    setOrderDateTo("");
+  };
+
+  const hasBookingFilters =
+    bookingStatusFilter !== "all" || bookingDateFrom || bookingDateTo;
+
+  const hasOrderFilters =
+    orderStatusFilter !== "all" || orderDateFrom || orderDateTo;
+
+  return (
+    <div className="space-y-6 max-w-6xl">
+      <div className="mb-6">
+        <h1 className="text-2xl font-semibold tracking-tight text-[var(--ink)] font-[family-name:var(--font-dm-sans)]">
+          {variant === "service" ? "Bookings" : "Orders"}
+        </h1>
+        <p className="text-sm text-[var(--ash)] mt-1">
+          {variant === "service"
+            ? "Manage appointments and your booking calendar."
+            : "Track and manage customer orders."}
+        </p>
       </div>
-    </AppShell>
+
+      {/* Dev toggle */}
+      <div className="rounded-lg border border-dashed border-[var(--amber)]/40 bg-[var(--amber)]/5 px-4 py-3 mb-6">
+        <p className="text-xs font-medium text-[var(--amber)] mb-2">
+          Dev preview toggle
+        </p>
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            variant={variant === "service" ? "default" : "outline"}
+            onClick={() => setVariant("service")}
+            className="gap-1.5"
+          >
+            <Scissors className="h-3.5 w-3.5" />
+            Service variant
+          </Button>
+          <Button
+            size="sm"
+            variant={variant === "product" ? "default" : "outline"}
+            onClick={() => setVariant("product")}
+            className="gap-1.5"
+          >
+            <Package className="h-3.5 w-3.5" />
+            Product variant
+          </Button>
+        </div>
+      </div>
+
+      {/* ══════════════════════════════════════════════════════════════════════
+          SERVICE VARIANT — Appointments
+          ══════════════════════════════════════════════════════════════════════ */}
+
+      {variant === "service" && (
+        <section>
+          <SectionHeading
+            icon={CalendarDays}
+            title="Appointments"
+            description="View and manage customer bookings."
+          />
+
+          {/* Filters row */}
+          <Card className="mb-4">
+            <CardContent className="p-4">
+              <div className="flex flex-wrap items-end gap-3">
+                {/* Status filter */}
+                <div className="space-y-1.5">
+                  <Label className="text-[10px]">Status</Label>
+                  <div className="flex gap-1.5">
+                    {bookingStatuses.map((s) => (
+                      <button
+                        key={s}
+                        onClick={() => setBookingStatusFilter(s)}
+                        className={cn(
+                          "rounded-md border px-2.5 py-1 text-xs font-medium capitalize transition-colors",
+                          bookingStatusFilter === s
+                            ? "border-[var(--cedar)] bg-[var(--mist)] text-[var(--cedar)]"
+                            : "border-[var(--slate)] text-[var(--ash)] hover:border-[var(--border-strong)]",
+                        )}
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <Separator orientation="vertical" className="h-8" />
+
+                {/* Date range */}
+                <div className="space-y-1.5">
+                  <Label className="text-[10px]">From</Label>
+                  <Input
+                    type="date"
+                    value={bookingDateFrom}
+                    onChange={(e) => setBookingDateFrom(e.target.value)}
+                    className="h-8 w-[140px] text-xs"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-[10px]">To</Label>
+                  <Input
+                    type="date"
+                    value={bookingDateTo}
+                    onChange={(e) => setBookingDateTo(e.target.value)}
+                    className="h-8 w-[140px] text-xs"
+                  />
+                </div>
+
+                {hasBookingFilters && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={clearBookingFilters}
+                    className="gap-1 h-8 text-xs text-[var(--ash)]"
+                  >
+                    <X className="h-3 w-3" />
+                    Clear
+                  </Button>
+                )}
+
+                <div className="flex-1" />
+
+                {/* View toggle + Add */}
+                <div className="flex gap-1.5">
+                  <div className="flex rounded-md border border-[var(--slate)] overflow-hidden">
+                    <button
+                      onClick={() => setBookingView("table")}
+                      className={cn(
+                        "flex items-center gap-1 px-2.5 py-1 text-xs font-medium transition-colors",
+                        bookingView === "table"
+                          ? "bg-[var(--mist)] text-[var(--cedar)]"
+                          : "text-[var(--ash)] hover:bg-[var(--linen)]",
+                      )}
+                    >
+                      <List className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      onClick={() => setBookingView("calendar")}
+                      className={cn(
+                        "flex items-center gap-1 px-2.5 py-1 text-xs font-medium transition-colors border-l border-[var(--slate)]",
+                        bookingView === "calendar"
+                          ? "bg-[var(--mist)] text-[var(--cedar)]"
+                          : "text-[var(--ash)] hover:bg-[var(--linen)]",
+                      )}
+                    >
+                      <CalendarIcon className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      setEditingBooking(null);
+                      setBookingDialogOpen(true);
+                    }}
+                    className="gap-1.5"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    Add booking
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Table view */}
+          {bookingView === "table" && (
+            <Card>
+              <CardContent className="p-5">
+                <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Customer</TableHead>
+                      <TableHead>Service</TableHead>
+                      <TableHead>Staff</TableHead>
+                      <TableHead>Date & Time</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="w-20" />
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredBookings.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center py-12">
+                          <div className="flex flex-col items-center gap-2">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--linen)]">
+                              <CalendarDays className="h-5 w-5 text-[var(--ash)]" />
+                            </div>
+                            <p className="text-sm font-medium text-[var(--ink)]">
+                              {hasBookingFilters
+                                ? "No bookings match your filters."
+                                : "No bookings yet."}
+                            </p>
+                            <p className="text-xs text-[var(--ash)] max-w-[240px]">
+                              {hasBookingFilters
+                                ? "Try widening your date range or clearing the status filter."
+                                : "New appointments will appear here as customers book through WhatsApp."}
+                            </p>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredBookings.map((b) => (
+                        <TableRow key={b.id}>
+                          <TableCell>
+                            <p className="font-medium text-[var(--ink)]">
+                              {b.customer}
+                            </p>
+                          </TableCell>
+                          <TableCell className="text-sm text-[var(--ink)]">
+                            {b.service}
+                          </TableCell>
+                          <TableCell className="text-sm text-[var(--ash)]">
+                            {b.staff}
+                          </TableCell>
+                          <TableCell>
+                            <div className="text-sm text-[var(--ink)]">
+                              {formatDate(b.date)}
+                            </div>
+                            <div className="text-xs font-[family-name:var(--font-jetbrains-mono)] text-[var(--ash)]">
+                              {b.time}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                "text-[10px] capitalize",
+                                statusColors[b.status],
+                              )}
+                            >
+                              {b.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => {
+                                  setEditingBooking(b);
+                                  setBookingDialogOpen(true);
+                                }}
+                                className="p-1.5 rounded hover:bg-hover-bg transition-colors"
+                              >
+                                <Edit className="h-3.5 w-3.5 text-[var(--ash)]" />
+                              </button>
+                              <button
+                                onClick={() => deleteBooking(b.id)}
+                                className="p-1.5 rounded hover:bg-hover-bg transition-colors"
+                              >
+                                <Trash2 className="h-3.5 w-3.5 text-[var(--ash)]" />
+                              </button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Calendar view */}
+          {bookingView === "calendar" && (
+            <BookingCalendar
+              bookings={bookings}
+              onSelectDate={(date) => {
+                setBookingDateFrom(date);
+                setBookingDateTo(date);
+                setBookingView("table");
+              }}
+            />
+          )}
+
+          <BookingDialog
+            open={bookingDialogOpen}
+            onOpenChange={(v) => {
+              setBookingDialogOpen(v);
+              if (!v) setEditingBooking(null);
+            }}
+            booking={editingBooking}
+            onSave={saveBooking}
+          />
+        </section>
+      )}
+
+      {/* ══════════════════════════════════════════════════════════════════════
+          PRODUCT VARIANT — Orders
+          ══════════════════════════════════════════════════════════════════════ */}
+
+      {variant === "product" && (
+        <section>
+          <SectionHeading
+            icon={Package}
+            title="Orders"
+            description="Track and fulfill customer orders."
+          />
+
+          {/* Filters row */}
+          <Card className="mb-4">
+            <CardContent className="p-4">
+              <div className="flex flex-wrap items-end gap-3">
+                {/* Status filter */}
+                <div className="space-y-1.5">
+                  <Label className="text-[10px]">Status</Label>
+                  <div className="flex gap-1.5">
+                    {orderStatuses.map((s) => (
+                      <button
+                        key={s}
+                        onClick={() => setOrderStatusFilter(s)}
+                        className={cn(
+                          "rounded-md border px-2.5 py-1 text-xs font-medium capitalize transition-colors",
+                          orderStatusFilter === s
+                            ? "border-[var(--cedar)] bg-[var(--mist)] text-[var(--cedar)]"
+                            : "border-[var(--slate)] text-[var(--ash)] hover:border-[var(--border-strong)]",
+                        )}
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <Separator orientation="vertical" className="h-8" />
+
+                {/* Date range */}
+                <div className="space-y-1.5">
+                  <Label className="text-[10px]">From</Label>
+                  <Input
+                    type="date"
+                    value={orderDateFrom}
+                    onChange={(e) => setOrderDateFrom(e.target.value)}
+                    className="h-8 w-[140px] text-xs"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-[10px]">To</Label>
+                  <Input
+                    type="date"
+                    value={orderDateTo}
+                    onChange={(e) => setOrderDateTo(e.target.value)}
+                    className="h-8 w-[140px] text-xs"
+                  />
+                </div>
+
+                {hasOrderFilters && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={clearOrderFilters}
+                    className="gap-1 h-8 text-xs text-[var(--ash)]"
+                  >
+                    <X className="h-3 w-3" />
+                    Clear
+                  </Button>
+                )}
+
+                <div className="flex-1" />
+
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    setEditingOrder(null);
+                    setOrderDialogOpen(true);
+                  }}
+                  className="gap-1.5"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  Add order
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-5">
+              <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Customer</TableHead>
+                    <TableHead>Products</TableHead>
+                    <TableHead className="text-right">Total</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="w-20" />
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredOrders.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-12">
+                        <div className="flex flex-col items-center gap-2">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--linen)]">
+                            <Package className="h-5 w-5 text-[var(--ash)]" />
+                          </div>
+                          <p className="text-sm font-medium text-[var(--ink)]">
+                            {hasOrderFilters
+                              ? "No orders match your filters."
+                              : "No orders yet."}
+                          </p>
+                          <p className="text-xs text-[var(--ash)] max-w-[240px]">
+                            {hasOrderFilters
+                              ? "Try widening your date range or clearing the status filter."
+                              : "Orders will appear here as customers make purchases through WhatsApp."}
+                          </p>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredOrders.map((o) => (
+                      <TableRow key={o.id}>
+                        <TableCell>
+                          <p className="font-medium text-[var(--ink)]">
+                            {o.customer}
+                          </p>
+                        </TableCell>
+                        <TableCell>
+                          <div className="space-y-0.5">
+                            {o.products.map((p, i) => (
+                              <div
+                                key={i}
+                                className="text-sm text-[var(--ink)]"
+                              >
+                                {p.name}
+                                <span className="text-[var(--ash)] ml-1">
+                                  ×{p.qty}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <span className="text-sm font-semibold font-[family-name:var(--font-jetbrains-mono)] text-[var(--ink)]">
+                            ${o.total}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-sm font-[family-name:var(--font-jetbrains-mono)] text-[var(--ash)]">
+                          {formatDate(o.date)}
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              "text-[10px] capitalize",
+                              statusColors[o.status],
+                            )}
+                          >
+                            {o.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => {
+                                setEditingOrder(o);
+                                setOrderDialogOpen(true);
+                              }}
+                              className="p-1.5 rounded hover:bg-hover-bg transition-colors"
+                            >
+                              <Edit className="h-3.5 w-3.5 text-[var(--ash)]" />
+                            </button>
+                            <button
+                              onClick={() => deleteOrder(o.id)}
+                              className="p-1.5 rounded hover:bg-hover-bg transition-colors"
+                            >
+                              <Trash2 className="h-3.5 w-3.5 text-[var(--ash)]" />
+                            </button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+              </div>
+            </CardContent>
+          </Card>
+
+          <OrderDialog
+            open={orderDialogOpen}
+            onOpenChange={(v) => {
+              setOrderDialogOpen(v);
+              if (!v) setEditingOrder(null);
+            }}
+            order={editingOrder}
+            onSave={saveOrder}
+          />
+        </section>
+      )}
+    </div>
   );
 }

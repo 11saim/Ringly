@@ -1,8 +1,29 @@
 import type { Metadata } from "next";
+import { DM_Sans, Inter, JetBrains_Mono } from "next/font/google";
 import { Toaster } from "sonner";
-import { ThemeProvider } from "next-themes";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import "./globals.css";
+
+const dmSans = DM_Sans({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-dm-sans",
+  display: "swap",
+});
+
+const inter = Inter({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  variable: "--font-inter",
+  display: "swap",
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500"],
+  variable: "--font-jetbrains-mono",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: {
@@ -18,13 +39,12 @@ export const metadata: Metadata = {
     "WhatsApp automation",
     "business booking",
     "customer service AI",
-    "Pakistan",
     "WhatsApp Business",
   ],
   openGraph: {
     title: "Ringly — AI agents that sell and book for your business",
     description:
-      "AI agents on WhatsApp and voice that handle real conversations, take bookings, and grow your revenue. Live in minutes, no code.",
+      "AI agents on WhatsApp and voice that handle real conversations, take bookings, and grow your revenue.",
     type: "website",
     siteName: "Ringly",
     locale: "en_US",
@@ -40,13 +60,6 @@ export const metadata: Metadata = {
   robots: {
     index: true,
     follow: true,
-    googleBot: {
-      index: true,
-      follow: true,
-      "max-video-preview": -1,
-      "max-image-preview": "large",
-      "max-snippet": -1,
-    },
   },
   icons: {
     icon: "/favicon.ico",
@@ -61,42 +74,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <head>
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
-              "@context": "https://schema.org",
-              "@type": "SoftwareApplication",
-              name: "Ringly",
-              applicationCategory: "BusinessApplication",
-              operatingSystem: "Web",
-              description:
-                "AI agents on WhatsApp and voice that handle real conversations, take bookings, and grow your revenue.",
-              url: "https://ringly.ai",
-              offers: {
-                "@type": "AggregateOffer",
-                lowPrice: "0",
-                highPrice: "199",
-                priceCurrency: "USD",
-                offerCount: 3,
-              },
-              aggregateRating: {
-                "@type": "AggregateRating",
-                ratingValue: "4.8",
-                ratingCount: "500",
-              },
-            }),
-          }}
-        />
-      </head>
-      <body>
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          <TooltipProvider>
-            {children}
-            <Toaster />
-          </TooltipProvider>
-        </ThemeProvider>
+      <body className={`${dmSans.variable} ${inter.variable} ${jetbrainsMono.variable}`}>
+        <TooltipProvider>
+          {children}
+          <Toaster />
+        </TooltipProvider>
       </body>
     </html>
   );

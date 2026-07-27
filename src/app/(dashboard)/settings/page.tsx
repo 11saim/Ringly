@@ -1,84 +1,78 @@
 "use client";
 
-import { AppShell } from "@/components/app/AppShell";
-import { Settings as SettingsIcon, User, Bell, Shield, Globe } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { useEffect, useState } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ProfileTab } from "@/components/app/ProfileTab";
+import { PersonaTab } from "@/components/app/PersonaTab";
+import { OfferingsTab } from "@/components/app/OfferingsTab";
+import { PoliciesTab } from "@/components/app/PoliciesTab";
+import { KnowledgeBaseTab } from "@/components/app/KnowledgeBaseTab";
 
-const CARD = "rounded-[16px] border border-border/30 bg-card shadow-[var(--shadow-card)]";
+const tabs = [
+  { value: "profile", label: "Profile" },
+  { value: "persona", label: "Persona" },
+  { value: "offerings", label: "Offerings" },
+  { value: "policies", label: "Policies & Escalation" },
+  { value: "knowledge", label: "Knowledge Base" },
+] as const;
 
-const sections = [
-  {
-    id: "profile",
-    label: "Profile",
-    icon: User,
-    description: "Your name, email, and avatar",
-    fields: [
-      { label: "Name", value: "Ahmed Naveed" },
-      { label: "Email", value: "ahmed@ringly.ai" },
-      { label: "Role", value: "Owner" },
-    ],
-  },
-  {
-    id: "notifications",
-    label: "Notifications",
-    icon: Bell,
-    description: "How you receive updates",
-    fields: [
-      { label: "Email notifications", value: "Enabled" },
-      { label: "Push notifications", value: "Enabled" },
-      { label: "Weekly digest", value: "Disabled" },
-    ],
-  },
-  {
-    id: "security",
-    label: "Security",
-    icon: Shield,
-    description: "Password and authentication",
-    fields: [
-      { label: "Password", value: "Last changed 30 days ago" },
-      { label: "Two-factor auth", value: "Enabled" },
-    ],
-  },
-  {
-    id: "language",
-    label: "Language & Region",
-    icon: Globe,
-    description: "Language and timezone",
-    fields: [
-      { label: "Language", value: "English" },
-      { label: "Timezone", value: "UTC+5 (Pakistan)" },
-    ],
-  },
-];
+type TabValue = (typeof tabs)[number]["value"];
 
 export default function SettingsPage() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const initial = (searchParams.get("tab") as TabValue) || "profile";
+  const [activeTab, setActiveTab] = useState<TabValue>(
+    tabs.some((t) => t.value === initial) ? initial : "profile",
+  );
+
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", activeTab);
+    router.replace(`?${params.toString()}`, { scroll: false });
+  }, [activeTab]);
+
   return (
-    <AppShell title="Settings">
-      <div className="space-y-4 max-w-2xl">
-        {sections.map((section) => (
-          <div key={section.id} className={cn(CARD, "overflow-hidden")}>
-            <div className="px-5 py-4 border-b border-border/25">
-              <div className="flex items-center gap-3">
-                <div className="flex h-8 w-8 items-center justify-center rounded-[8px] bg-muted/50">
-                  <section.icon size={15} strokeWidth={1.5} className="text-muted-foreground/40" />
-                </div>
-                <div>
-                  <h3 className="text-[13px] font-semibold text-foreground">{section.label}</h3>
-                  <p className="text-[11px] text-muted-foreground/45">{section.description}</p>
-                </div>
-              </div>
-            </div>
-            <div className="divide-y divide-border/15">
-              {section.fields.map((field) => (
-                <div key={field.label} className="flex items-center justify-between px-5 py-3">
-                  <span className="text-[13px] text-muted-foreground/60">{field.label}</span>
-                  <span className="text-[13px] font-medium text-foreground">{field.value}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        ))}
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight font-[family-name:var(--font-dm-sans)] text-[var(--ink)]">
+          Business Settings
+        </h1>
+        <p className="mt-1 text-sm text-[var(--ash)]">
+          Configure how your business and agent appear to customers.
+        </p>
       </div>
-    </AppShell>
+
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabValue)}>
+        <TabsList className="w-full justify-start overflow-x-auto scrollbar-none">
+          {tabs.map((tab) => (
+            <TabsTrigger key={tab.value} value={tab.value}>
+              {tab.label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+
+        <TabsContent value="profile">
+          <ProfileTab />
+        </TabsContent>
+
+        <TabsContent value="persona">
+          <PersonaTab />
+        </TabsContent>
+
+        <TabsContent value="offerings">
+          <OfferingsTab />
+        </TabsContent>
+
+        <TabsContent value="policies">
+          <PoliciesTab />
+        </TabsContent>
+
+        <TabsContent value="knowledge">
+          <KnowledgeBaseTab />
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 }
