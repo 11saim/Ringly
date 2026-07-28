@@ -5,7 +5,7 @@ import {
   Users,
   Calendar,
   Megaphone,
-  Bot,
+  BarChart3,
   CreditCard,
   type LucideIcon,
 } from "lucide-react";
@@ -48,7 +48,7 @@ export const navSections: NavSection[] = [
     id: "system",
     label: "SYSTEM",
     items: [
-      { id: "agent-preview", label: "Agent Preview", href: "/agent-preview", icon: Bot, shortcut: "G A" },
+      { id: "analytics", label: "Analytics", href: "/analytics", icon: BarChart3, shortcut: "G A" },
       { id: "account", label: "Account & Billing", href: "/account", icon: CreditCard, shortcut: "G $" },
     ],
   },

@@ -16,27 +16,52 @@ export interface Appointment {
 
 export interface ActivityItem {
   id: string;
-  type: "booking" | "escalation" | "low_stock" | "new_contact" | "broadcast";
+  type: "booking" | "escalation" | "low_stock" | "new_contact" | "broadcast" | "large_order";
   title: string;
   description: string;
   time: string;
   contact?: string;
+  href?: string;
 }
 
-export const todayStats: Stat[] = [
-  { label: "Conversations", value: "47", change: "+12%", changeType: "positive" },
-  { label: "Messages", value: "312", change: "+8%", changeType: "positive" },
-  { label: "New Contacts", value: "9", change: "+3", changeType: "positive" },
-  { label: "Avg Response", value: "1.2s", change: "-0.3s", changeType: "positive" },
+export interface EscalatedConversation {
+  id: string;
+  contact: string;
+  initials: string;
+  lastMessage: string;
+  waitingSince: string;
+  unread: number;
+}
+
+export interface TodayOutcome {
+  count: number;
+  totalValue: number;
+}
+
+export interface AgentPerformance {
+  thisWeek: { resolved: number; total: number; rate: number; avgResponseTime: string };
+  lastWeek: { resolved: number; total: number; rate: number; avgResponseTime: string };
+}
+
+export const escalatedConversations: EscalatedConversation[] = [
+  { id: "c2", contact: "James Wilson", initials: "JW", lastMessage: "I need to speak to someone about pricing", waitingSince: "8 min ago", unread: 2 },
+  { id: "c6", contact: "David Chen", initials: "DC", lastMessage: "I was charged twice for my last visit", waitingSince: "25 min ago", unread: 1 },
+  { id: "c8", contact: "Omar Hassan", initials: "OH", lastMessage: "This product caused a reaction, I need help", waitingSince: "1 hr ago", unread: 3 },
 ];
 
-export const resolutionRates = {
-  agentResolved: 78,
-  humanHandoff: 22,
-  totalConversations: 47,
-  resolvedByAgent: 37,
-  handoffToHuman: 10,
+export const todayBookingsService: TodayOutcome = { count: 4, totalValue: 285 };
+export const todayOrdersProduct: TodayOutcome = { count: 6, totalValue: 192 };
+
+export const agentPerformance: AgentPerformance = {
+  thisWeek: { resolved: 189, total: 214, rate: 88, avgResponseTime: "1.1s" },
+  lastWeek: { resolved: 167, total: 208, rate: 80, avgResponseTime: "1.4s" },
 };
+
+export const lowStockProducts = [
+  { id: "p2", name: "Coconut Oil Mask", stock: 3, threshold: 10 },
+  { id: "p5", name: "Argan Oil Treatment", stock: 5, threshold: 10 },
+  { id: "p1", name: "Vitamin C Serum", stock: 8, threshold: 10 },
+];
 
 export const upcomingAppointments: Appointment[] = [
   { id: "a1", client: "Sarah Ahmed", service: "Balayage", time: "10:00 AM", date: "Today", status: "confirmed" },
@@ -47,12 +72,12 @@ export const upcomingAppointments: Appointment[] = [
 ];
 
 export const recentActivity: ActivityItem[] = [
-  { id: "r1", type: "booking", title: "New booking confirmed", description: "Sarah Ahmed booked Balayage for today at 10:00 AM", time: "2 min ago", contact: "Sarah Ahmed" },
-  { id: "r2", type: "escalation", title: "Conversation escalated", description: "James Wilson's query about pricing needs human review", time: "8 min ago", contact: "James Wilson" },
-  { id: "r3", type: "new_contact", title: "New contact added", description: "Priya Patel started a conversation via WhatsApp", time: "15 min ago", contact: "Priya Patel" },
-  { id: "r4", type: "broadcast", title: "Broadcast sent", description: "Weekend promo sent to 234 contacts — 89% delivered", time: "1 hr ago" },
-  { id: "r5", type: "booking", title: "Booking rescheduled", description: "Ali Khan moved his appointment from 2:00 PM to 3:30 PM", time: "2 hr ago", contact: "Ali Khan" },
-  { id: "r6", type: "escalation", title: "Refund request", description: "Maria Garcia requested a refund for cancelled service", time: "3 hr ago", contact: "Maria Garcia" },
+  { id: "r1", type: "escalation", title: "Escalated: billing dispute", description: "David Chen was charged twice for his last visit — needs human review", time: "25 min ago", contact: "David Chen", href: "/inbox" },
+  { id: "r2", type: "large_order", title: "Large order placed", description: "Emma Thompson ordered 4× Vitamin C Serum + 2× Keratin Shampoo — $192", time: "42 min ago", contact: "Emma Thompson", href: "/inbox" },
+  { id: "r3", type: "low_stock", title: "Low stock alert", description: "Coconut Oil Mask down to 3 units — reorder threshold is 10", time: "1 hr ago", href: "/settings?tab=offerings" },
+  { id: "r4", type: "booking", title: "VIP booking confirmed", description: "David Chen booked Balayage + Manicure combo for tomorrow at 10 AM", time: "1.5 hr ago", contact: "David Chen", href: "/bookings" },
+  { id: "r5", type: "escalation", title: "Escalated: product reaction", description: "Omar Hassan reported a skin reaction — needs immediate attention", time: "1 hr ago", contact: "Omar Hassan", href: "/inbox" },
+  { id: "r6", type: "new_contact", title: "New VIP contact", description: "Corporate inquiry from James Wilson — potential recurring account", time: "2 hr ago", contact: "James Wilson", href: "/contacts" },
 ];
 
 // ── Inbox ──
@@ -455,4 +480,199 @@ export const mockInvoices: Invoice[] = [
   { id: "inv-2026-04", date: "2026-04-01", amount: 29, status: "paid", description: "Starter plan — April 2026" },
   { id: "inv-2026-03", date: "2026-03-01", amount: 29, status: "paid", description: "Starter plan — March 2026" },
   { id: "inv-2026-02", date: "2026-02-01", amount: 29, status: "paid", description: "Starter plan — February 2026" },
+];
+
+// ── Overview: Live conversations ──
+
+export interface LiveConversations {
+  agentHandled: number;
+  humanHandled: number;
+  total: number;
+}
+
+export const liveConversations: LiveConversations = {
+  agentHandled: 14,
+  humanHandled: 3,
+  total: 17,
+};
+
+// ── Overview: Weekly revenue ──
+
+export interface WeeklyRevenue {
+  thisWeek: number;
+  lastWeek: number;
+}
+
+export const weeklyRevenue: WeeklyRevenue = {
+  thisWeek: 2310,
+  lastWeek: 1890,
+};
+
+// ── Overview: WhatsApp connection ──
+
+export interface ConnectionHealth {
+  connected: boolean;
+  lastSynced: string;
+  issuesDetected: number;
+}
+
+export const connectionHealth: ConnectionHealth = {
+  connected: true,
+  lastSynced: "2 min ago",
+  issuesDetected: 0,
+};
+
+// ── Analytics ──
+
+export interface VolumePoint {
+  label: string;
+  conversations: number;
+  messages: number;
+}
+
+export interface ResolutionPoint {
+  label: string;
+  agentResolved: number;
+  handedOff: number;
+}
+
+export interface CustomerTypePoint {
+  label: string;
+  new: number;
+  returning: number;
+}
+
+export interface HandoffPoint {
+  label: string;
+  count: number;
+}
+
+export interface ResponseTimePoint {
+  label: string;
+  seconds: number;
+}
+
+export interface HourlyHeatmap {
+  day: string;
+  hours: number[];
+}
+
+export interface OutcomeTrendPoint {
+  label: string;
+  count: number;
+  value: number;
+}
+
+// ── New vs Returning (daily) ──
+
+export const customerTypeDaily: CustomerTypePoint[] = [
+  { label: "Mon", new: 8, returning: 34 },
+  { label: "Tue", new: 6, returning: 32 },
+  { label: "Wed", new: 11, returning: 40 },
+  { label: "Thu", new: 9, returning: 36 },
+  { label: "Fri", new: 14, returning: 42 },
+  { label: "Sat", new: 5, returning: 29 },
+  { label: "Sun", new: 3, returning: 15 },
+];
+
+// ── New vs Returning (weekly) ──
+
+export const customerTypeWeekly: CustomerTypePoint[] = [
+  { label: "Week 1", new: 38, returning: 176 },
+  { label: "Week 2", new: 42, returning: 196 },
+  { label: "Week 3", new: 51, returning: 216 },
+  { label: "Week 4", new: 44, returning: 208 },
+  { label: "Week 5", new: 48, returning: 233 },
+  { label: "Week 6", new: 55, returning: 240 },
+];
+
+// ── Handoff volume (daily) ──
+
+export const handoffDaily: HandoffPoint[] = [
+  { label: "Mon", count: 6 },
+  { label: "Tue", count: 4 },
+  { label: "Wed", count: 9 },
+  { label: "Thu", count: 7 },
+  { label: "Fri", count: 11 },
+  { label: "Sat", count: 3 },
+  { label: "Sun", count: 2 },
+];
+
+// ── Handoff volume (weekly) ──
+
+export const handoffWeekly: HandoffPoint[] = [
+  { label: "Week 1", count: 42 },
+  { label: "Week 2", count: 38 },
+  { label: "Week 3", count: 47 },
+  { label: "Week 4", count: 41 },
+  { label: "Week 5", count: 36 },
+  { label: "Week 6", count: 33 },
+];
+
+// ── Avg response time (daily) ──
+
+export const responseTimeDaily: ResponseTimePoint[] = [
+  { label: "Mon", seconds: 1.3 },
+  { label: "Tue", seconds: 1.1 },
+  { label: "Wed", seconds: 1.4 },
+  { label: "Thu", seconds: 1.0 },
+  { label: "Fri", seconds: 1.2 },
+  { label: "Sat", seconds: 0.9 },
+  { label: "Sun", seconds: 0.8 },
+];
+
+// ── Avg response time (weekly) ──
+
+export const responseTimeWeekly: ResponseTimePoint[] = [
+  { label: "Week 1", seconds: 1.6 },
+  { label: "Week 2", seconds: 1.4 },
+  { label: "Week 3", seconds: 1.3 },
+  { label: "Week 4", seconds: 1.2 },
+  { label: "Week 5", seconds: 1.1 },
+  { label: "Week 6", seconds: 1.1 },
+];
+
+// ── Resolution trend (kept) ──
+
+export const resolutionTrend: ResolutionPoint[] = [
+  { label: "Week 1", agentResolved: 152, handedOff: 62 },
+  { label: "Week 2", agentResolved: 174, handedOff: 64 },
+  { label: "Week 3", agentResolved: 198, handedOff: 69 },
+  { label: "Week 4", agentResolved: 189, handedOff: 63 },
+  { label: "Week 5", agentResolved: 214, handedOff: 67 },
+  { label: "Week 6", agentResolved: 231, handedOff: 64 },
+];
+
+// ── Busiest hours (kept) ──
+
+export const busiestHours: HourlyHeatmap[] = [
+  { day: "Mon", hours: [2, 1, 3, 8, 14, 18, 12, 6, 3, 1] },
+  { day: "Tue", hours: [1, 1, 2, 7, 12, 16, 14, 8, 4, 2] },
+  { day: "Wed", hours: [3, 2, 4, 10, 16, 22, 18, 9, 5, 2] },
+  { day: "Thu", hours: [2, 1, 3, 9, 15, 19, 15, 7, 4, 1] },
+  { day: "Fri", hours: [3, 2, 5, 12, 18, 24, 20, 11, 6, 3] },
+  { day: "Sat", hours: [1, 1, 2, 6, 10, 14, 12, 8, 4, 1] },
+  { day: "Sun", hours: [0, 0, 1, 3, 5, 7, 6, 4, 2, 0] },
+];
+
+// ── Bookings/Orders trend (kept) ──
+
+export const bookingsTrend: OutcomeTrendPoint[] = [
+  { label: "Mon", count: 8, value: 580 },
+  { label: "Tue", count: 6, value: 420 },
+  { label: "Wed", count: 11, value: 810 },
+  { label: "Thu", count: 9, value: 650 },
+  { label: "Fri", count: 13, value: 970 },
+  { label: "Sat", count: 7, value: 510 },
+  { label: "Sun", count: 3, value: 220 },
+];
+
+export const ordersTrend: OutcomeTrendPoint[] = [
+  { label: "Mon", count: 12, value: 340 },
+  { label: "Tue", count: 9, value: 255 },
+  { label: "Wed", count: 15, value: 430 },
+  { label: "Thu", count: 11, value: 310 },
+  { label: "Fri", count: 18, value: 520 },
+  { label: "Sat", count: 8, value: 225 },
+  { label: "Sun", count: 4, value: 110 },
 ];
