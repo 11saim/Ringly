@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { LogOut, Settings, User } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -13,12 +14,20 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useTenant } from "@/lib/tenant-context";
 import { useSidebarCollapsed } from "@/hooks/use-sidebar-store";
+import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
 export function Header() {
+  const router = useRouter();
   const tenant = useTenant();
   const [collapsed] = useSidebarCollapsed();
   const [mobileOpen] = useState(false);
+
+  async function handleSignOut() {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push("/login");
+  }
 
   return (
     <header
@@ -68,7 +77,7 @@ export function Header() {
               Settings
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-[var(--ember)]">
+            <DropdownMenuItem className="text-[var(--ember)]" onClick={handleSignOut}>
               <LogOut className="mr-2 h-4 w-4" />
               Log out
             </DropdownMenuItem>

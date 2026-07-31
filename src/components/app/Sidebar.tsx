@@ -1,22 +1,30 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { LogOut, PanelLeftClose, PanelLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useSidebarCollapsed } from "@/hooks/use-sidebar-store";
+import { createClient } from "@/lib/supabase/client";
 import { RinglyLogo } from "./RinglyLogo";
 import { SidebarItem } from "./SidebarItem";
 import { navSections } from "@/lib/navigation";
 
 export function Sidebar() {
+  const router = useRouter();
   const pathname = usePathname();
   const isMobile = useIsMobile();
   const [collapsed, setCollapsed] = useSidebarCollapsed();
   const [mobileOpen, setMobileOpen] = useState(false);
   const prevIsMobileRef = useRef(isMobile);
   const prevPathnameRef = useRef(pathname);
+
+  async function handleSignOut() {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push("/login");
+  }
 
   useEffect(() => {
     if (prevIsMobileRef.current && !isMobile) setMobileOpen(false);
@@ -129,6 +137,7 @@ export function Sidebar() {
         </button>
 
         <button
+          onClick={handleSignOut}
           className={cn(
             "flex w-full items-center gap-3 rounded-md text-sm font-medium text-[var(--ash)]",
             "transition-colors duration-150",
