@@ -1,0 +1,1 @@
+alter table tenants alter column business_type drop not null;
