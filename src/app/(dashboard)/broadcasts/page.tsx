@@ -1,21 +1,17 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Check,
   CheckCheck,
-  ChevronDown,
   Clock,
-  Edit,
   Eye,
-  Filter,
+  Info,
   MessageSquare,
-  Plus,
   Send,
   SendHorizonal,
   Trash2,
   Users,
-  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -47,22 +43,15 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
-import {
-  mockBroadcasts,
-  mockTemplates,
-  type Broadcast,
-} from "@/lib/data";
+import { Skeleton } from "@/components/ui/skeleton";
+import { mockTemplates } from "@/lib/data";
+import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
 // ── Helpers ──
 
 const audienceOptions = [
-  { label: "All contacts", count: 142 },
-  { label: "VIP", count: 18 },
-  { label: "Regular", count: 56 },
-  { label: "New", count: 12 },
-  { label: "Corporate", count: 8 },
+  { label: "All contacts", count: 0 },
 ];
 
 function formatDateTime(iso: string) {
@@ -77,6 +66,29 @@ function formatDateTime(iso: string) {
 function formatTime(iso: string) {
   const d = new Date(iso);
   return d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+}
+
+// ── Types ──
+
+interface DbBroadcast {
+  id: string;
+  message_template: string;
+  scheduled_at: string | null;
+  sent_at: string | null;
+  status: "draft" | "scheduled" | "sent";
+  created_at: string;
+}
+
+interface DisplayBroadcast {
+  id: string;
+  message: string;
+  template: string | null;
+  audience: string;
+  audienceSize: number;
+  sentAt: string;
+  delivered: number;
+  read: number;
+  status: "sent" | "scheduled" | "draft";
 }
 
 // ── Section Heading ──
@@ -105,10 +117,49 @@ function SectionHeading({
   );
 }
 
+// ── Loading Skeleton ──
+
+function BroadcastsSkeleton() {
+  return (
+    <div className="space-y-6 max-w-6xl">
+      <div className="mb-6">
+        <Skeleton className="h-7 w-36 mb-2" />
+        <Skeleton className="h-4 w-64" />
+      </div>
+      <section className="mb-8">
+        <Skeleton className="h-10 w-full mb-4" />
+        <Card>
+          <CardContent className="p-5 space-y-5">
+            <Skeleton className="h-5 w-32" />
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-5 w-24" />
+            <Skeleton className="h-32 w-full" />
+            <Skeleton className="h-5 w-24" />
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-5 w-24" />
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+          </CardContent>
+        </Card>
+      </section>
+      <section>
+        <Skeleton className="h-10 w-full mb-4" />
+        <Card>
+          <CardContent className="p-5">
+            <Skeleton className="h-64 w-full" />
+          </CardContent>
+        </Card>
+      </section>
+    </div>
+  );
+}
+
 // ── Main Page ──
 
 export default function BroadcastsPage() {
-  const [broadcasts, setBroadcasts] = useState(mockBroadcasts);
+  const [broadcasts, setBroadcasts] = useState<DisplayBroadcast[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
 
   // ── Compose state ──
   const [message, setMessage] = useState("");
@@ -122,17 +173,79 @@ export default function BroadcastsPage() {
   // ── History state ──
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
+  const fetchBroadcasts = useCallback(async () => {
+    const supabase = createClient();
+
+    // Fetch contact count for "All contacts" audience
+    const { count } = await supabase
+      .from("contacts")
+      .select("id", { count: "exact", head: true })
+      .eq("is_blocked", false);
+
+    audienceOptions[0].count = count ?? 0;
+
+    // Fetch broadcasts with recipient counts
+    const { data: bcRows } = await supabase
+      .from("broadcasts")
+      .select("id, message_template, scheduled_at, sent_at, status, created_at")
+      .order("created_at", { ascending: false });
+
+    if (!bcRows || bcRows.length === 0) {
+      setBroadcasts([]);
+      setLoading(false);
+      return;
+    }
+
+    const bcIds = bcRows.map((b) => b.id);
+
+    // Fetch recipient counts per broadcast
+    const { data: recipientRows } = await supabase
+      .from("broadcast_recipients")
+      .select("broadcast_id, delivered, read")
+      .in("broadcast_id", bcIds);
+
+    // Aggregate counts
+    const deliveredMap: Record<string, number> = {};
+    const readMap: Record<string, number> = {};
+    for (const r of recipientRows ?? []) {
+      if (r.delivered) deliveredMap[r.broadcast_id] = (deliveredMap[r.broadcast_id] ?? 0) + 1;
+      if (r.read) readMap[r.broadcast_id] = (readMap[r.broadcast_id] ?? 0) + 1;
+    }
+
+    // Fetch recipient counts per broadcast for audienceSize
+    const recipientCountMap: Record<string, number> = {};
+    for (const r of recipientRows ?? []) {
+      recipientCountMap[r.broadcast_id] = (recipientCountMap[r.broadcast_id] ?? 0) + 1;
+    }
+
+    const rows = bcRows as DbBroadcast[];
+    setBroadcasts(
+      rows.map((b) => ({
+        id: b.id,
+        message: b.message_template,
+        template: null,
+        audience: "All contacts",
+        audienceSize: recipientCountMap[b.id] ?? 0,
+        sentAt: b.sent_at ?? b.scheduled_at ?? b.created_at,
+        delivered: deliveredMap[b.id] ?? 0,
+        read: readMap[b.id] ?? 0,
+        status: b.status as "sent" | "scheduled" | "draft",
+      })),
+    );
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchBroadcasts();
+  }, [fetchBroadcasts]);
+
   const filteredBroadcasts = useMemo(() => {
     return broadcasts.filter((b) => {
       if (statusFilter === "all") return true;
       return b.status === statusFilter;
     });
   }, [broadcasts, statusFilter]);
-
-  const templateBody =
-    selectedTemplate !== "none"
-      ? mockTemplates.find((t) => t.id === selectedTemplate)?.body ?? ""
-      : "";
 
   const applyTemplate = (templateId: string) => {
     if (templateId === "none") {
@@ -146,24 +259,66 @@ export default function BroadcastsPage() {
     }
   };
 
-  const handleSend = () => {
-    if (!message.trim()) return;
-    const aud = audienceOptions.find((a) => a.label === audience);
-    const newBroadcast: Broadcast = {
-      id: `bc-${Date.now()}`,
-      message: message.trim(),
+  const handleSend = async () => {
+    if (!message.trim() || sending) return;
+    setSending(true);
+
+    const supabase = createClient();
+    const now = new Date().toISOString();
+    const scheduledAt = sendNow
+      ? null
+      : new Date(`${scheduleDate}T${scheduleTime}:00`).toISOString();
+    const status = sendNow ? "sent" : "scheduled";
+
+    // Insert broadcast row
+    const { data: bcData, error: bcError } = await supabase
+      .from("broadcasts")
+      .insert({
+        message_template: message.trim(),
+        scheduled_at: scheduledAt,
+        sent_at: sendNow ? now : null,
+        status,
+      })
+      .select("id, message_template, scheduled_at, sent_at, status, created_at")
+      .single();
+
+    if (bcError || !bcData) {
+      setSending(false);
+      return;
+    }
+
+    // Fetch all non-blocked contact IDs
+    const { data: contactRows } = await supabase
+      .from("contacts")
+      .select("id")
+      .eq("is_blocked", false);
+
+    // Insert broadcast_recipients for each contact
+    if (contactRows && contactRows.length > 0) {
+      const recipients = contactRows.map((c) => ({
+        broadcast_id: bcData.id,
+        contact_id: c.id,
+        delivered: false,
+        read: false,
+      }));
+
+      await supabase.from("broadcast_recipients").insert(recipients);
+    }
+
+    // Update local state
+    const newBroadcast: DisplayBroadcast = {
+      id: bcData.id,
+      message: bcData.message_template,
       template:
         selectedTemplate !== "none"
           ? mockTemplates.find((t) => t.id === selectedTemplate)?.name ?? null
           : null,
-      audience,
-      audienceSize: aud?.count ?? 0,
-      sentAt: sendNow
-        ? new Date().toISOString()
-        : new Date(`${scheduleDate}T${scheduleTime}:00`).toISOString(),
+      audience: "All contacts",
+      audienceSize: contactRows?.length ?? 0,
+      sentAt: bcData.sent_at ?? bcData.scheduled_at ?? bcData.created_at,
       delivered: 0,
       read: 0,
-      status: sendNow ? "sent" : "scheduled",
+      status: bcData.status as "sent" | "scheduled" | "draft",
     };
     setBroadcasts((prev) => [newBroadcast, ...prev]);
     setMessage("");
@@ -172,10 +327,17 @@ export default function BroadcastsPage() {
     setSendNow(true);
     setScheduleDate("");
     setScheduleTime("10:00");
+    setSending(false);
   };
 
-  const deleteBroadcast = (id: string) =>
+  const deleteBroadcast = async (id: string) => {
+    const supabase = createClient();
+    await supabase.from("broadcast_recipients").delete().eq("broadcast_id", id);
+    await supabase.from("broadcasts").delete().eq("id", id);
     setBroadcasts((prev) => prev.filter((b) => b.id !== id));
+  };
+
+  if (loading) return <BroadcastsSkeleton />;
 
   return (
     <div className="space-y-6 max-w-6xl">
@@ -376,23 +538,31 @@ export default function BroadcastsPage() {
                   contacts
                 </span>
               </div>
-              <Button
-                onClick={handleSend}
-                disabled={!message.trim()}
-                className="gap-1.5"
-              >
-                {sendNow ? (
-                  <>
-                    <Send className="h-3.5 w-3.5" />
-                    Send now
-                  </>
-                ) : (
-                  <>
-                    <Clock className="h-3.5 w-3.5" />
-                    Schedule
-                  </>
-                )}
-              </Button>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1.5 text-[10px] text-[var(--ash)] bg-[var(--linen)] rounded-md px-2 py-1">
+                  <Info className="h-3 w-3" />
+                  <span>WhatsApp sending not yet live</span>
+                </div>
+                <Button
+                  onClick={handleSend}
+                  disabled={!message.trim() || sending}
+                  className="gap-1.5"
+                >
+                  {sending ? (
+                    "Sending..."
+                  ) : sendNow ? (
+                    <>
+                      <Send className="h-3.5 w-3.5" />
+                      Send now
+                    </>
+                  ) : (
+                    <>
+                      <Clock className="h-3.5 w-3.5" />
+                      Schedule
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>

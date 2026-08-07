@@ -1,10 +1,11 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Bot,
   Globe,
   MessageSquare,
+  RefreshCw,
   Smile,
   Tags,
   Upload,
@@ -17,13 +18,15 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { useTenant } from "@/lib/tenant-context";
+import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
 const tones = [
   {
     id: "formal",
     label: "Formal",
-    description: "Professional and courteous. Best for clinics and corporate services.",
+    description:
+      "Professional and courteous. Best for clinics and corporate services.",
     example: "Good morning. How may I assist you today?",
   },
   {
@@ -86,8 +89,11 @@ function SectionHeading({
 export function PersonaTab() {
   const tenant = useTenant();
 
+  // Loading state
+  const [loading, setLoading] = useState(true);
+
   // Agent identity
-  const [agentName, setAgentName] = useState("Bloom Assistant");
+  const [agentName, setAgentName] = useState("");
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
@@ -95,9 +101,7 @@ export function PersonaTab() {
   const [tone, setTone] = useState<string>("friendly");
 
   // Messages
-  const [greeting, setGreeting] = useState(
-    "Hi! Welcome to {business_name}. How can I help you today?",
-  );
+  const [greeting, setGreeting] = useState("");
   const [signoff, setSignoff] = useState("");
 
   // Preferences
@@ -105,20 +109,53 @@ export function PersonaTab() {
   const [responseLength, setResponseLength] = useState<string>("concise");
 
   // Fallback
-  const [fallback, setFallback] = useState(
-    "I'm sorry, I'm not sure about that. Let me connect you with our team who can help.",
-  );
+  const [fallback, setFallback] = useState("");
 
   // Banned terms
-  const [bannedTerms, setBannedTerms] = useState<string[]>([
-    "competitor",
-    "rival",
-    "discount code",
-  ]);
+  const [bannedTerms, setBannedTerms] = useState<string[]>([]);
   const [termInput, setTermInput] = useState("");
 
   // Save state
   const [saving, setSaving] = useState(false);
+
+  // Fetch data from Supabase
+  const fetchData = useCallback(async () => {
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
+    const { data: persona } = await supabase
+      .from("agent_persona")
+      .select(
+        "display_name, avatar_url, tone, greeting_message, signoff_message, use_emoji, response_length, fallback_message, banned_terms",
+      )
+      .eq("tenant_id", user.id)
+      .single();
+
+    if (persona) {
+      setAgentName(persona.display_name || "");
+      setAvatarPreview(persona.avatar_url || null);
+      setTone(persona.tone || "friendly");
+      setGreeting(persona.greeting_message || "");
+      setSignoff(persona.signoff_message || "");
+      setEmojiEnabled(persona.use_emoji ?? true);
+      setResponseLength(persona.response_length || "concise");
+      setFallback(persona.fallback_message || "");
+      setBannedTerms(persona.banned_terms || []);
+    }
+
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void fetchData();
+  }, [fetchData]);
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -144,10 +181,44 @@ export function PersonaTab() {
   const renderedGreeting = greeting.replace(/{business_name}/g, tenant.name);
   const renderedSignoff = signoff.replace(/{business_name}/g, tenant.name);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     setSaving(true);
-    setTimeout(() => setSaving(false), 1200);
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      setSaving(false);
+      return;
+    }
+
+    const { error } = await supabase.from("agent_persona").upsert(
+      {
+        tenant_id: user.id,
+        display_name: agentName,
+        avatar_url: avatarPreview,
+        tone: tone as "formal" | "friendly" | "casual" | "playful",
+        greeting_message: greeting || null,
+        signoff_message: signoff || null,
+        use_emoji: emojiEnabled,
+        response_length: responseLength as "concise" | "detailed",
+        fallback_message: fallback || null,
+        banned_terms: bannedTerms,
+      },
+      { onConflict: "tenant_id" },
+    );
+
+    if (error) console.error("Failed to save persona:", error);
+    setSaving(false);
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <RefreshCw className="h-5 w-5 text-[var(--ash)] animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 pb-24">
@@ -179,7 +250,8 @@ export function PersonaTab() {
                         onClick={(e) => {
                           e.stopPropagation();
                           setAvatarPreview(null);
-                          if (avatarInputRef.current) avatarInputRef.current.value = "";
+                          if (avatarInputRef.current)
+                            avatarInputRef.current.value = "";
                         }}
                         className="absolute top-1 right-1 h-5 w-5 rounded-full bg-[var(--ink)]/70 text-white flex items-center justify-center"
                       >
@@ -189,7 +261,9 @@ export function PersonaTab() {
                   ) : (
                     <div className="text-center">
                       <Upload className="h-5 w-5 text-[var(--ash)] mx-auto" />
-                      <p className="text-[10px] text-[var(--ash)] mt-1">Upload</p>
+                      <p className="text-[10px] text-[var(--ash)] mt-1">
+                        Upload
+                      </p>
                     </div>
                   )}
                 </div>
@@ -341,9 +415,7 @@ export function PersonaTab() {
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--ash)] mb-2">
                   Sign-off preview
                 </p>
-                <p className="text-sm text-[var(--ink)]">
-                  {renderedSignoff}
-                </p>
+                <p className="text-sm text-[var(--ink)]">{renderedSignoff}</p>
               </div>
             )}
           </CardContent>
@@ -367,7 +439,10 @@ export function PersonaTab() {
                   Agent may use emojis to convey tone.
                 </p>
               </div>
-              <Switch checked={emojiEnabled} onCheckedChange={setEmojiEnabled} />
+              <Switch
+                checked={emojiEnabled}
+                onCheckedChange={setEmojiEnabled}
+              />
             </div>
 
             <div className="h-px bg-[var(--border-subtle)]" />
@@ -411,7 +486,9 @@ export function PersonaTab() {
                         )}
                       </div>
                     </div>
-                    <p className="text-xs text-[var(--ash)]">{rl.description}</p>
+                    <p className="text-xs text-[var(--ash)]">
+                      {rl.description}
+                    </p>
                   </button>
                 ))}
               </div>
@@ -435,7 +512,8 @@ export function PersonaTab() {
               className="min-h-[80px] text-sm"
             />
             <p className="text-[10px] text-[var(--ash)]">
-              Keep this helpful and reassuring — it's often the last thing a confused customer sees.
+              Keep this helpful and reassuring — it&apos;s often the last thing
+              a confused customer sees.
             </p>
           </CardContent>
         </Card>
@@ -488,14 +566,18 @@ export function PersonaTab() {
                 variant="outline"
                 size="sm"
                 onClick={addTerm}
-                disabled={!termInput.trim() || bannedTerms.includes(termInput.trim().toLowerCase())}
+                disabled={
+                  !termInput.trim() ||
+                  bannedTerms.includes(termInput.trim().toLowerCase())
+                }
                 className="shrink-0"
               >
                 Add
               </Button>
             </div>
             <p className="text-[10px] text-[var(--ash)]">
-              {bannedTerms.length} term{bannedTerms.length !== 1 ? "s" : ""} banned. The agent will
+              {bannedTerms.length} term
+              {bannedTerms.length !== 1 ? "s" : ""} banned. The agent will
               rephrase rather than use these words.
             </p>
           </CardContent>

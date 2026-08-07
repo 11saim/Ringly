@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { createClient } from "@/lib/supabase/client";
 import {
   ArrowLeft,
   Bot,
@@ -15,67 +16,400 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
-import { mockConversations, type Conversation, type ConversationMode } from "@/lib/data";
 import { cn } from "@/lib/utils";
 
-const modeConfig: Record<ConversationMode, { label: string; className: string; dotClass: string }> = {
-  agent: { label: "Agent handling", className: "bg-[var(--mist)] text-[var(--cedar)]", dotClass: "bg-[var(--cedar)]" },
-  human: { label: "Human handling", className: "bg-[var(--amber)]/10 text-[var(--amber)]", dotClass: "bg-[var(--amber)]" },
-  resolved: { label: "Resolved", className: "bg-[var(--linen)] text-[var(--ash)]", dotClass: "bg-[var(--ash)]" },
+// ── Types ──
+
+type ConversationMode = "agent" | "human" | "resolved";
+
+interface DbConversation {
+  id: string;
+  contact_id: string;
+  status: "agent" | "human" | "resolved";
+  started_at: string;
+  last_message_at: string;
+  handed_off_at: string | null;
+  contacts: { name: string | null; phone: string; first_contact_at: string }[] | null;
+}
+
+interface DbMessage {
+  id: string;
+  conversation_id: string;
+  sender_type: "customer" | "agent" | "human_staff";
+  content: string;
+  is_internal_note: boolean;
+  created_at: string;
+}
+
+interface InboxMessage {
+  id: string;
+  sender: "agent" | "customer" | "human";
+  text: string;
+  time: string;
+}
+
+interface DisplayConversation {
+  id: string;
+  contact_id: string;
+  contact: string;
+  phone: string;
+  initials: string;
+  lastMessage: string;
+  lastTime: string;
+  unread: boolean;
+  mode: ConversationMode;
+  messages: InboxMessage[];
+  notes: string[];
+  firstContactAt: string;
+}
+
+// ── Helpers ──
+
+const modeConfig: Record<
+  ConversationMode,
+  { label: string; className: string; dotClass: string }
+> = {
+  agent: {
+    label: "Agent handling",
+    className: "bg-[var(--mist)] text-[var(--cedar)]",
+    dotClass: "bg-[var(--cedar)]",
+  },
+  human: {
+    label: "Human handling",
+    className: "bg-[var(--amber)]/10 text-[var(--amber)]",
+    dotClass: "bg-[var(--amber)]",
+  },
+  resolved: {
+    label: "Resolved",
+    className: "bg-[var(--linen)] text-[var(--ash)]",
+    dotClass: "bg-[var(--ash)]",
+  },
 };
 
+function deriveInitials(name: string | null): string {
+  if (!name) return "??";
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0].toUpperCase())
+    .join("");
+}
+
+function formatRelativeTime(dateStr: string): string {
+  const d = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - d.getTime();
+  const diffMin = Math.floor(diffMs / 60000);
+  const diffHr = Math.floor(diffMs / 3600000);
+  const diffDay = Math.floor(diffMs / 86400000);
+
+  if (diffMin < 1) return "Just now";
+  if (diffMin < 60) return `${diffMin}m ago`;
+  if (diffHr < 24) return `${diffHr}h ago`;
+  if (diffDay === 1) return "Yesterday";
+  if (diffDay < 7) return `${diffDay}d ago`;
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+function formatTime(dateStr: string): string {
+  return new Date(dateStr).toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+}
+
+function mapSenderType(
+  senderType: "customer" | "agent" | "human_staff",
+): "customer" | "agent" | "human" {
+  if (senderType === "human_staff") return "human";
+  return senderType;
+}
+
+function buildDisplayConversation(
+  conv: DbConversation,
+  messages: DbMessage[],
+): DisplayConversation {
+  const contact = Array.isArray(conv.contacts) ? conv.contacts[0] : conv.contacts;
+  const name = contact?.name ?? "Unknown";
+  const phone = contact?.phone ?? "";
+
+  const regularMsgs = messages
+    .filter((m) => !m.is_internal_note)
+    .map((m) => ({
+      id: m.id,
+      sender: mapSenderType(m.sender_type),
+      text: m.content,
+      time: formatTime(m.created_at),
+    }));
+
+  const notes = messages
+    .filter((m) => m.is_internal_note)
+    .map((m) => m.content);
+
+  const sorted = [...messages].sort(
+    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+  );
+  const lastNonInternal = sorted.find((m) => !m.is_internal_note);
+
+  const lastSender = lastNonInternal?.sender_type;
+  const unread = lastSender === "customer";
+
+  return {
+    id: conv.id,
+    contact_id: conv.contact_id,
+    contact: name,
+    phone,
+    initials: deriveInitials(name),
+    lastMessage: lastNonInternal?.content ?? "No messages yet",
+    lastTime: conv.last_message_at
+      ? formatRelativeTime(conv.last_message_at)
+      : "",
+    unread,
+    mode: conv.status,
+    messages: regularMsgs,
+    notes,
+    firstContactAt: (Array.isArray(conv.contacts) ? conv.contacts[0] : conv.contacts)?.first_contact_at ?? conv.started_at,
+  };
+}
+
+// ── Component ──
+
 export default function InboxPage() {
-  const [conversations, setConversations] = useState(mockConversations);
-  const [selectedId, setSelectedId] = useState<string | null>("c1");
+  const supabase = useMemo(() => createClient(), []);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const [loading, setLoading] = useState(true);
+  const [conversations, setConversations] = useState<DisplayConversation[]>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showInfo, setShowInfo] = useState(false);
   const [replyText, setReplyText] = useState("");
   const [noteText, setNoteText] = useState("");
 
   const selected = conversations.find((c) => c.id === selectedId) ?? null;
 
-  const handleTakeOver = (id: string) => {
-    setConversations((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, mode: "human" as const } : c)),
-    );
-  };
+  // ── Fetch conversations + messages ──
 
-  const handleHandBack = (id: string) => {
-    setConversations((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, mode: "agent" as const } : c)),
-    );
-  };
+  const fetchConversations = useCallback(async () => {
+    setLoading(true);
 
-  const handleSendReply = () => {
+    const [convResult, msgResult] = await Promise.all([
+      supabase
+        .from("conversations")
+        .select(
+          "id, contact_id, status, started_at, last_message_at, handed_off_at, contacts(name, phone, first_contact_at)",
+        )
+        .order("last_message_at", { ascending: false }),
+      supabase
+        .from("messages")
+        .select("id, conversation_id, sender_type, content, is_internal_note, created_at")
+        .order("created_at", { ascending: false })
+        .limit(500),
+    ]);
+
+    const dbConvs = (convResult.data ?? []) as DbConversation[];
+    const dbMsgs = (msgResult.data ?? []) as DbMessage[];
+
+    const msgsByConv: Record<string, DbMessage[]> = {};
+    for (const m of dbMsgs) {
+      if (!msgsByConv[m.conversation_id]) msgsByConv[m.conversation_id] = [];
+      msgsByConv[m.conversation_id].push(m);
+    }
+
+    setConversations(
+      dbConvs.map((conv) =>
+        buildDisplayConversation(conv, msgsByConv[conv.id] ?? []),
+      ),
+    );
+    setLoading(false);
+  }, [supabase]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchConversations();
+  }, [fetchConversations]);
+
+  // ── Fetch messages for selected conversation ──
+
+  const fetchMessages = useCallback(
+    async (convId: string) => {
+      const { data } = await supabase
+        .from("messages")
+        .select("id, conversation_id, sender_type, content, is_internal_note, created_at")
+        .eq("conversation_id", convId)
+        .order("created_at", { ascending: true });
+
+      const dbMsgs = (data ?? []) as DbMessage[];
+
+      setConversations((prev) =>
+        prev.map((c) => {
+          if (c.id !== convId) return c;
+          const regularMsgs = dbMsgs
+            .filter((m) => !m.is_internal_note)
+            .map((m) => ({
+              id: m.id,
+              sender: mapSenderType(m.sender_type),
+              text: m.content,
+              time: formatTime(m.created_at),
+            }));
+          const notes = dbMsgs
+            .filter((m) => m.is_internal_note)
+            .map((m) => m.content);
+          return { ...c, messages: regularMsgs, notes };
+        }),
+      );
+    },
+    [supabase],
+  );
+
+  // ── Realtime subscription ──
+
+  useEffect(() => {
+    if (!selectedId) return;
+
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchMessages(selectedId);
+
+    const channel = supabase
+      .channel(`inbox-messages-${selectedId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "messages",
+          filter: `conversation_id=eq.${selectedId}`,
+        },
+        (payload) => {
+          const msg = payload.new as DbMessage;
+          const mapped: InboxMessage = {
+            id: msg.id,
+            sender: mapSenderType(msg.sender_type),
+            text: msg.content,
+            time: formatTime(msg.created_at),
+          };
+
+          setConversations((prev) =>
+            prev.map((c) => {
+              if (c.id !== selectedId) return c;
+              if (msg.is_internal_note) {
+                return { ...c, notes: [...c.notes, msg.content] };
+              }
+              return {
+                ...c,
+                messages: [...c.messages, mapped],
+                lastMessage: msg.content,
+                lastTime: "Just now",
+              };
+            }),
+          );
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [selectedId, supabase, fetchMessages]);
+
+  // ── Auto-scroll on new messages ──
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [selected?.messages.length]);
+
+  // ── Handlers ──
+
+  const handleTakeOver = useCallback(
+    async (id: string) => {
+      const { error } = await supabase
+        .from("conversations")
+        .update({
+          status: "human",
+          handed_off_at: new Date().toISOString(),
+        })
+        .eq("id", id);
+
+      if (error) return;
+
+      setConversations((prev) =>
+        prev.map((c) =>
+          c.id === id ? { ...c, mode: "human" as const } : c,
+        ),
+      );
+    },
+    [supabase],
+  );
+
+  const handleHandBack = useCallback(
+    async (id: string) => {
+      const { error } = await supabase
+        .from("conversations")
+        .update({ status: "agent", handed_off_at: null })
+        .eq("id", id);
+
+      if (error) return;
+
+      setConversations((prev) =>
+        prev.map((c) =>
+          c.id === id ? { ...c, mode: "agent" as const } : c,
+        ),
+      );
+    },
+    [supabase],
+  );
+
+  const handleSendReply = useCallback(async () => {
     if (!selected || !replyText.trim()) return;
-    const newMsg = {
-      id: `m-${Date.now()}`,
-      sender: "human" as const,
-      text: replyText.trim(),
+    const text = replyText.trim();
+
+    const { error } = await supabase.from("messages").insert({
+      conversation_id: selected.id,
+      sender_type: "human_staff",
+      content: text,
+      is_internal_note: false,
+    });
+
+    if (error) return;
+
+    const newMsg: InboxMessage = {
+      id: `temp-${Date.now()}`,
+      sender: "human",
+      text,
       time: "Just now",
     };
     setConversations((prev) =>
       prev.map((c) =>
         c.id === selected.id
-          ? { ...c, messages: [...c.messages, newMsg], lastMessage: newMsg.text, lastTime: "Just now" }
+          ? { ...c, messages: [...c.messages, newMsg], lastMessage: text, lastTime: "Just now" }
           : c,
       ),
     );
     setReplyText("");
-  };
+  }, [selected, replyText, supabase]);
 
-  const handleAddNote = () => {
+  const handleAddNote = useCallback(async () => {
     if (!selected || !noteText.trim()) return;
+    const text = noteText.trim();
+
+    const { error } = await supabase.from("messages").insert({
+      conversation_id: selected.id,
+      sender_type: "human_staff",
+      content: text,
+      is_internal_note: true,
+    });
+
+    if (error) return;
+
     setConversations((prev) =>
       prev.map((c) =>
-        c.id === selected.id
-          ? { ...c, notes: [...c.notes, noteText.trim()] }
-          : c,
+        c.id === selected.id ? { ...c, notes: [...c.notes, text] } : c,
       ),
     );
     setNoteText("");
-  };
+  }, [selected, noteText, supabase]);
 
   return (
     <div className="flex h-[calc(100vh-3.5rem)] -m-6">
@@ -93,73 +427,105 @@ export default function InboxPage() {
             Inbox
           </h2>
           <Badge variant="secondary" className="text-[10px]">
-            {conversations.filter((c) => c.unread > 0).length} unread
+            {conversations.filter((c) => c.unread).length} unread
           </Badge>
         </div>
 
         {/* Conversation items */}
         <div className="flex-1 overflow-y-auto">
-          {conversations.map((conv) => {
-            const mode = modeConfig[conv.mode];
-            return (
-              <button
-                key={conv.id}
-                onClick={() => setSelectedId(conv.id)}
-                className={cn(
-                  "w-full text-left px-4 py-3 transition-colors duration-100",
-                  "border-b border-[var(--border-subtle)]",
-                  selectedId === conv.id
-                    ? "bg-[var(--mist)]"
-                    : "hover:bg-hover-bg",
-                )}
-              >
-                <div className="flex items-start gap-3">
-                  {/* Avatar */}
-                  <div className="relative shrink-0">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--mist)] text-[var(--cedar)] text-sm font-semibold font-[family-name:var(--font-dm-sans)]">
-                      {conv.initials}
-                    </div>
-                    {conv.unread > 0 && (
-                      <div className="absolute -top-0.5 -right-0.5 h-3 w-3 rounded-full bg-[var(--cedar)] border-2 border-white" />
-                    )}
-                  </div>
-
-                  {/* Content */}
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between gap-2">
-                      <span
-                        className={cn(
-                          "text-sm truncate",
-                          conv.unread > 0
-                            ? "font-semibold text-[var(--ink)]"
-                            : "font-medium text-[var(--ink)]",
-                        )}
-                      >
-                        {conv.contact}
-                      </span>
-                      <span className="text-[10px] text-[var(--ash)] font-[family-name:var(--font-jetbrains-mono)] shrink-0">
-                        {conv.lastTime}
-                      </span>
-                    </div>
-                    <p className="text-xs text-[var(--ash)] truncate mt-0.5">
-                      {conv.lastMessage}
-                    </p>
-                    <div className="mt-1.5">
-                      <span
-                        className={cn(
-                          "inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium",
-                          mode.className,
-                        )}
-                      >
-                        <span className={cn("h-1.5 w-1.5 rounded-full", mode.dotClass)} />
-                        {mode.label}
-                      </span>
-                    </div>
+          {loading ? (
+            <div className="p-4 space-y-3">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="flex items-start gap-3 animate-pulse">
+                  <div className="h-10 w-10 rounded-full bg-[var(--linen)]" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-3 w-24 bg-[var(--linen)] rounded" />
+                    <div className="h-2.5 w-40 bg-[var(--linen)] rounded" />
                   </div>
                 </div>
-              </button>
-            );
-          })}
+              ))}
+            </div>
+          ) : conversations.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 px-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--linen)]">
+                <Clock className="h-5 w-5 text-[var(--ash)]" />
+              </div>
+              <p className="mt-3 text-sm font-medium text-[var(--ink)]">
+                No conversations yet
+              </p>
+              <p className="mt-1 text-xs text-[var(--ash)] text-center max-w-[220px]">
+                Conversations will appear here as customers start messaging
+                your WhatsApp number.
+              </p>
+            </div>
+          ) : (
+            conversations.map((conv) => {
+              const mode = modeConfig[conv.mode];
+              return (
+                <button
+                  key={conv.id}
+                  onClick={() => setSelectedId(conv.id)}
+                  className={cn(
+                    "w-full text-left px-4 py-3 transition-colors duration-100",
+                    "border-b border-[var(--border-subtle)]",
+                    selectedId === conv.id
+                      ? "bg-[var(--mist)]"
+                      : "hover:bg-hover-bg",
+                  )}
+                >
+                  <div className="flex items-start gap-3">
+                    {/* Avatar */}
+                    <div className="relative shrink-0">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--mist)] text-[var(--cedar)] text-sm font-semibold font-[family-name:var(--font-dm-sans)]">
+                        {conv.initials}
+                      </div>
+                      {conv.unread && (
+                        <div className="absolute -top-0.5 -right-0.5 h-3 w-3 rounded-full bg-[var(--cedar)] border-2 border-white" />
+                      )}
+                    </div>
+
+                    {/* Content */}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <span
+                          className={cn(
+                            "text-sm truncate",
+                            conv.unread
+                              ? "font-semibold text-[var(--ink)]"
+                              : "font-medium text-[var(--ink)]",
+                          )}
+                        >
+                          {conv.contact}
+                        </span>
+                        <span className="text-[10px] text-[var(--ash)] font-[family-name:var(--font-jetbrains-mono)] shrink-0">
+                          {conv.lastTime}
+                        </span>
+                      </div>
+                      <p className="text-xs text-[var(--ash)] truncate mt-0.5">
+                        {conv.lastMessage}
+                      </p>
+                      <div className="mt-1.5">
+                        <span
+                          className={cn(
+                            "inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium",
+                            mode.className,
+                          )}
+                        >
+                          <span
+                            className={cn(
+                              "h-1.5 w-1.5 rounded-full",
+                              mode.dotClass,
+                            )}
+                          />
+                          {mode.label}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </button>
+              );
+            })
+          )}
         </div>
       </div>
 
@@ -182,8 +548,12 @@ export default function InboxPage() {
                   {selected.initials}
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-[var(--ink)]">{selected.contact}</p>
-                  <p className="text-[10px] text-[var(--ash)] font-[family-name:var(--font-jetbrains-mono)]">{selected.phone}</p>
+                  <p className="text-sm font-medium text-[var(--ink)]">
+                    {selected.contact}
+                  </p>
+                  <p className="text-[10px] text-[var(--ash)] font-[family-name:var(--font-jetbrains-mono)]">
+                    {selected.phone}
+                  </p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -212,7 +582,9 @@ export default function InboxPage() {
                   onClick={() => setShowInfo(!showInfo)}
                   className={cn(
                     "p-2 rounded-md transition-colors",
-                    showInfo ? "bg-[var(--mist)] text-[var(--cedar)]" : "hover:bg-hover-bg text-[var(--ash)]",
+                    showInfo
+                      ? "bg-[var(--mist)] text-[var(--cedar)]"
+                      : "hover:bg-hover-bg text-[var(--ash)]",
                   )}
                 >
                   <Phone className="h-4 w-4" />
@@ -222,6 +594,11 @@ export default function InboxPage() {
 
             {/* Messages */}
             <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+              {selected.messages.length === 0 && (
+                <div className="flex flex-col items-center justify-center py-16">
+                  <p className="text-sm text-[var(--ash)]">No messages yet.</p>
+                </div>
+              )}
               {selected.messages.map((msg) => {
                 const isAgent = msg.sender === "agent";
                 const isHuman = msg.sender === "human";
@@ -238,7 +615,8 @@ export default function InboxPage() {
                     <div
                       className={cn(
                         "max-w-[75%] rounded-lg px-3 py-2",
-                        isCustomer && "bg-white border border-[var(--slate)] text-[var(--ink)]",
+                        isCustomer &&
+                          "bg-white border border-[var(--slate)] text-[var(--ink)]",
                         isAgent && "bg-[var(--cedar)] text-white",
                         isHuman && "bg-[var(--ink)] text-white",
                       )}
@@ -269,6 +647,7 @@ export default function InboxPage() {
                   </div>
                 );
               })}
+              <div ref={messagesEndRef} />
             </div>
 
             {/* Reply input */}
@@ -356,14 +735,20 @@ export default function InboxPage() {
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-[var(--ash)]">First contact</span>
-                  <span className="text-xs text-[var(--ink)]">Today</span>
+                  <span className="text-xs text-[var(--ink)]">
+                    {new Date(selected.firstContactAt).toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    })}
+                  </span>
                 </div>
               </div>
 
               {/* Link to contacts */}
               <div className="px-4 py-3 border-b border-[var(--slate)]">
                 <Link
-                  href="/contacts"
+                  href={`/contacts`}
                   className="flex items-center gap-2 text-xs text-[var(--cedar)] hover:text-[var(--forest)] transition-colors"
                 >
                   View full contact profile →

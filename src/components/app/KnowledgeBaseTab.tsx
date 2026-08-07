@@ -1,14 +1,14 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   FileText,
   HelpCircle,
   Inbox,
   Plus,
+  RefreshCw,
   Trash2,
   Upload,
-  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -17,6 +17,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
 interface Faq {
@@ -28,28 +29,23 @@ interface Faq {
 interface Document {
   id: string;
   name: string;
-  type: "file" | "text";
-  size?: string;
+  source_type: "upload" | "paste";
   status: "processed" | "pending" | "failed";
 }
 
-const initialFaqs: Faq[] = [
-  { id: "f1", question: "What are your opening hours?", answer: "We're open Mon–Fri 9 AM – 6 PM, Sat 10 AM – 4 PM, and Sun 10 AM – 2 PM." },
-  { id: "f2", question: "Do you accept walk-ins?", answer: "Yes, but appointments get priority. Walk-ins are served on a first-come basis." },
-  { id: "f3", question: "How do I reschedule?", answer: "Just send us a message here or call us at least 24 hours before your appointment." },
-];
-
-const initialDocs: Document[] = [
-  { id: "d1", name: "Service Menu 2026.pdf", type: "file", size: "245 KB", status: "processed" },
-  { id: "d2", name: "Cancellation & Refund Policy", type: "text", status: "processed" },
-  { id: "d3", name: "Staff bios and specializations", type: "text", status: "pending" },
-  { id: "d4", name: "Product catalog.pdf", type: "file", size: "1.2 MB", status: "failed" },
-];
-
 const statusConfig: Record<string, { label: string; className: string }> = {
-  processed: { label: "Processed", className: "bg-[var(--mist)] text-[var(--cedar)]" },
-  pending: { label: "Pending", className: "bg-[var(--amber)]/10 text-[var(--amber)]" },
-  failed: { label: "Failed", className: "bg-[var(--ember)]/10 text-[var(--ember)]" },
+  processed: {
+    label: "Processed",
+    className: "bg-[var(--mist)] text-[var(--cedar)]",
+  },
+  pending: {
+    label: "Pending",
+    className: "bg-[var(--amber)]/10 text-[var(--amber)]",
+  },
+  failed: {
+    label: "Failed",
+    className: "bg-[var(--ember)]/10 text-[var(--ember)]",
+  },
 };
 
 function SectionHeading({
@@ -82,8 +78,11 @@ function SectionHeading({
 }
 
 export function KnowledgeBaseTab() {
+  // Loading state
+  const [loading, setLoading] = useState(true);
+
   // FAQs
-  const [faqs, setFaqs] = useState<Faq[]>(initialFaqs);
+  const [faqs, setFaqs] = useState<Faq[]>([]);
   const [newQuestion, setNewQuestion] = useState("");
   const [newAnswer, setNewAnswer] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -91,7 +90,7 @@ export function KnowledgeBaseTab() {
   const [editAnswer, setEditAnswer] = useState("");
 
   // Documents
-  const [documents, setDocuments] = useState<Document[]>(initialDocs);
+  const [documents, setDocuments] = useState<Document[]>([]);
   const [pasteText, setPasteText] = useState("");
   const [pasteTitle, setPasteTitle] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -100,14 +99,74 @@ export function KnowledgeBaseTab() {
   // Save state
   const [saving, setSaving] = useState(false);
 
+  // Fetch data from Supabase
+  const fetchData = useCallback(async () => {
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
+    // 1. Fetch FAQs
+    const { data: faqRows } = await supabase
+      .from("kb_faqs")
+      .select("id, question, answer")
+      .eq("tenant_id", user.id);
+
+    if (faqRows) setFaqs(faqRows);
+
+    // 2. Fetch documents
+    const { data: docRows } = await supabase
+      .from("kb_documents")
+      .select("id, source_type, status, name, created_at")
+      .eq("tenant_id", user.id)
+      .order("created_at", { ascending: false });
+
+    if (docRows) {
+      setDocuments(
+        docRows.map((d) => ({
+          id: d.id,
+          name: d.name || (d.source_type === "paste" ? "Pasted text" : "Untitled"),
+          source_type: d.source_type as "upload" | "paste",
+          status: d.status as "processed" | "pending" | "failed",
+        })),
+      );
+    }
+
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void fetchData();
+  }, [fetchData]);
+
   // ── FAQ actions ──
 
-  const addFaq = () => {
+  const addFaq = async () => {
     if (!newQuestion.trim() || !newAnswer.trim()) return;
-    setFaqs((prev) => [
-      ...prev,
-      { id: `f-${Date.now()}`, question: newQuestion.trim(), answer: newAnswer.trim() },
-    ]);
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data: newFaq } = await supabase
+      .from("kb_faqs")
+      .insert({
+        tenant_id: user.id,
+        question: newQuestion.trim(),
+        answer: newAnswer.trim(),
+      })
+      .select()
+      .single();
+
+    if (newFaq) {
+      setFaqs((prev) => [...prev, newFaq]);
+    }
     setNewQuestion("");
     setNewAnswer("");
   };
@@ -118,8 +177,17 @@ export function KnowledgeBaseTab() {
     setEditAnswer(faq.answer);
   };
 
-  const saveEdit = () => {
+  const saveEdit = async () => {
     if (!editingId) return;
+    const supabase = createClient();
+    await supabase
+      .from("kb_faqs")
+      .update({
+        question: editQuestion.trim(),
+        answer: editAnswer.trim(),
+      })
+      .eq("id", editingId);
+
     setFaqs((prev) =>
       prev.map((f) =>
         f.id === editingId
@@ -134,55 +202,114 @@ export function KnowledgeBaseTab() {
     setEditingId(null);
   };
 
-  const deleteFaq = (id: string) => {
+  const deleteFaq = async (id: string) => {
+    const supabase = createClient();
+    await supabase.from("kb_faqs").delete().eq("id", id);
     setFaqs((prev) => prev.filter((f) => f.id !== id));
   };
 
   // ── Document actions ──
 
-  const addFiles = (files: FileList | null) => {
+  const addFiles = async (files: FileList | null) => {
     if (!files) return;
-    const newDocs: Document[] = Array.from(files).map((file) => ({
-      id: `d-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-      name: file.name,
-      type: "file" as const,
-      size: file.size < 1024 * 1024
-        ? `${Math.round(file.size / 1024)} KB`
-        : `${(file.size / (1024 * 1024)).toFixed(1)} MB`,
-      status: "pending" as const,
-    }));
-    setDocuments((prev) => [...prev, ...newDocs]);
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return;
+
+    for (const file of Array.from(files)) {
+      // Insert document row — file upload not built yet, so status = failed
+      console.warn(
+        `[KB] File upload not yet implemented for "${file.name}" — add real storage later`,
+      );
+      const { data: newDoc } = await supabase
+        .from("kb_documents")
+        .insert({
+          tenant_id: user.id,
+          source_type: "upload",
+          file_url: null,
+          name: file.name,
+          status: "failed",
+        })
+        .select()
+        .single();
+
+      if (newDoc) {
+        setDocuments((prev) => [
+          ...prev,
+          {
+            id: newDoc.id,
+            name: newDoc.name || file.name,
+            source_type: "upload",
+            status: "failed",
+          },
+        ]);
+      }
+    }
   };
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setDragOver(false);
-    addFiles(e.dataTransfer.files);
+    void addFiles(e.dataTransfer.files);
   };
 
-  const addPastedText = () => {
+  const addPastedText = async () => {
     if (!pasteText.trim()) return;
-    setDocuments((prev) => [
-      ...prev,
-      {
-        id: `d-${Date.now()}`,
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data: newDoc } = await supabase
+      .from("kb_documents")
+      .insert({
+        tenant_id: user.id,
+        source_type: "paste",
+        raw_text: pasteText,
         name: pasteTitle.trim() || "Pasted text",
-        type: "text",
         status: "pending",
-      },
-    ]);
+      })
+      .select()
+      .single();
+
+    if (newDoc) {
+      setDocuments((prev) => [
+        ...prev,
+        {
+          id: newDoc.id,
+          name: newDoc.name || "Pasted text",
+          source_type: "paste",
+          status: "pending",
+        },
+      ]);
+    }
     setPasteText("");
     setPasteTitle("");
   };
 
-  const deleteDoc = (id: string) => {
+  const deleteDoc = async (id: string) => {
+    const supabase = createClient();
+    await supabase.from("kb_documents").delete().eq("id", id);
     setDocuments((prev) => prev.filter((d) => d.id !== id));
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     setSaving(true);
-    setTimeout(() => setSaving(false), 1200);
+    // Documents and FAQs are saved inline (on add/edit/delete).
+    // This handler is for any pending state if needed.
+    setTimeout(() => setSaving(false), 500);
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <RefreshCw className="h-5 w-5 text-[var(--ash)] animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 pb-24">
@@ -215,10 +342,20 @@ export function KnowledgeBaseTab() {
                       placeholder="Answer"
                     />
                     <div className="flex items-center gap-2">
-                      <Button size="sm" onClick={saveEdit} disabled={!editQuestion.trim() || !editAnswer.trim()}>
+                      <Button
+                        size="sm"
+                        onClick={() => void saveEdit()}
+                        disabled={
+                          !editQuestion.trim() || !editAnswer.trim()
+                        }
+                      >
                         Save
                       </Button>
-                      <Button size="sm" variant="ghost" onClick={cancelEdit}>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={cancelEdit}
+                      >
                         Cancel
                       </Button>
                     </div>
@@ -226,7 +363,10 @@ export function KnowledgeBaseTab() {
                 ) : (
                   /* View mode */
                   <div className="flex items-start gap-3 py-3 group">
-                    <div className="flex-1 min-w-0 cursor-pointer" onClick={() => startEdit(faq)}>
+                    <div
+                      className="flex-1 min-w-0 cursor-pointer"
+                      onClick={() => startEdit(faq)}
+                    >
                       <p className="text-sm font-medium text-[var(--ink)] group-hover:text-[var(--cedar)] transition-colors">
                         {faq.question}
                       </p>
@@ -235,7 +375,7 @@ export function KnowledgeBaseTab() {
                       </p>
                     </div>
                     <button
-                      onClick={() => deleteFaq(faq.id)}
+                      onClick={() => void deleteFaq(faq.id)}
                       className="p-1.5 rounded opacity-0 group-hover:opacity-100 hover:bg-hover-bg transition-all"
                     >
                       <Trash2 className="h-3.5 w-3.5 text-[var(--ash)]" />
@@ -266,7 +406,7 @@ export function KnowledgeBaseTab() {
               />
               <Button
                 size="sm"
-                onClick={addFaq}
+                onClick={() => void addFaq()}
                 disabled={!newQuestion.trim() || !newAnswer.trim()}
                 className="gap-1.5"
               >
@@ -322,7 +462,7 @@ export function KnowledgeBaseTab() {
                 multiple
                 accept=".pdf,.doc,.docx"
                 className="hidden"
-                onChange={(e) => addFiles(e.target.files)}
+                onChange={(e) => void addFiles(e.target.files)}
               />
             </div>
 
@@ -345,7 +485,7 @@ export function KnowledgeBaseTab() {
               <Button
                 size="sm"
                 variant="outline"
-                onClick={addPastedText}
+                onClick={() => void addPastedText()}
                 disabled={!pasteText.trim()}
                 className="gap-1.5"
               >
@@ -372,7 +512,7 @@ export function KnowledgeBaseTab() {
                         >
                           <div className="flex items-center gap-3 min-w-0">
                             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-[var(--linen)]">
-                              {doc.type === "file" ? (
+                              {doc.source_type === "upload" ? (
                                 <FileText className="h-4 w-4 text-[var(--ash)]" />
                               ) : (
                                 <Inbox className="h-4 w-4 text-[var(--ash)]" />
@@ -383,19 +523,24 @@ export function KnowledgeBaseTab() {
                                 {doc.name}
                               </p>
                               <p className="text-[10px] text-[var(--ash)]">
-                                {doc.type === "file" ? doc.size : "Text content"}
+                                {doc.source_type === "upload"
+                                  ? "File upload"
+                                  : "Text content"}
                               </p>
                             </div>
                           </div>
                           <div className="flex items-center gap-2 shrink-0">
                             <Badge
                               variant="outline"
-                              className={cn("text-[10px] border-0", status.className)}
+                              className={cn(
+                                "text-[10px] border-0",
+                                status.className,
+                              )}
                             >
                               {status.label}
                             </Badge>
                             <button
-                              onClick={() => deleteDoc(doc.id)}
+                              onClick={() => void deleteDoc(doc.id)}
                               className="p-1 rounded hover:bg-hover-bg transition-colors"
                             >
                               <Trash2 className="h-3.5 w-3.5 text-[var(--ash)]" />
@@ -418,7 +563,7 @@ export function KnowledgeBaseTab() {
           <Button variant="ghost" size="sm">
             Cancel
           </Button>
-          <Button size="sm" onClick={handleSave} disabled={saving}>
+          <Button size="sm" onClick={() => void handleSave()} disabled={saving}>
             {saving ? "Saving..." : "Save changes"}
           </Button>
         </div>

@@ -1,15 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   AlertTriangle,
   Edit,
   ImagePlus,
   Package,
   Plus,
+  RefreshCw,
   Scissors,
   Trash2,
-  Wrench,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -33,47 +33,62 @@ import {
 } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import {
-  mockServices,
-  mockProducts,
-  type Service,
-  type Product,
-} from "@/lib/data";
+import { useTenant } from "@/lib/tenant-context";
+import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
+
+// ── DB row types ──
+
+interface ServiceRow {
+  id: string;
+  tenant_id: string;
+  name: string;
+  description: string | null;
+  duration_minutes: number;
+  price: number;
+  is_active: boolean;
+  staff_ids: string[];
+}
+
+interface ProductRow {
+  id: string;
+  tenant_id: string;
+  name: string;
+  description: string | null;
+  price: number;
+  stock_quantity: number;
+  low_stock_threshold: number;
+  category: string | null;
+  image_url: string | null;
+  is_active: boolean;
+}
+
+interface StaffRow {
+  id: string;
+  name: string;
+  is_active: boolean;
+}
 
 // ── Empty forms ──
 
-const emptyService: Omit<Service, "id"> = {
+const emptyService: Omit<ServiceRow, "id" | "tenant_id" | "is_active"> = {
   name: "",
-  duration: "30 min",
-  price: 0,
   description: "",
-  staff: [],
-  availability: "Mon–Sat",
-  active: true,
+  duration_minutes: 30,
+  price: 0,
+  staff_ids: [],
 };
 
-const emptyProduct: Omit<Product, "id"> = {
+const emptyProduct: Omit<ProductRow, "id" | "tenant_id" | "is_active"> = {
   name: "",
+  description: "",
   price: 0,
-  stock: 0,
-  lowStockThreshold: 10,
+  stock_quantity: 0,
+  low_stock_threshold: 10,
   category: "",
-  description: "",
-  image: null,
-  active: true,
+  image_url: null,
 };
-
-const staffOptions = ["Sarah A.", "Ali K.", "Maria G.", "Priya P."];
 
 function SectionHeading({
   icon: Icon,
@@ -105,25 +120,59 @@ function ServiceDialog({
   open,
   onOpenChange,
   service,
+  staffOptions,
   onSave,
+  onAddStaff,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  service: Service | null;
-  onSave: (data: Omit<Service, "id">) => void;
+  service: ServiceRow | null;
+  staffOptions: StaffRow[];
+  onSave: (data: Omit<ServiceRow, "id" | "tenant_id" | "is_active">) => void;
+  onAddStaff: (name: string) => Promise<StaffRow | null>;
 }) {
-  const [form, setForm] = useState<Omit<Service, "id">>(
+  const [form, setForm] = useState<Omit<ServiceRow, "id" | "tenant_id" | "is_active">>(
     service ?? emptyService,
   );
+  const [newStaffName, setNewStaffName] = useState("");
+  const [addingStaff, setAddingStaff] = useState(false);
 
-  const update = (field: string, value: unknown) =>
+  const update = (
+    field: string,
+    value: unknown,
+  ) =>
     setForm((prev) => ({ ...prev, [field]: value }));
+
+  const toggleStaff = (staffId: string) => {
+    setForm((prev) => ({
+      ...prev,
+      staff_ids: prev.staff_ids.includes(staffId)
+        ? prev.staff_ids.filter((s) => s !== staffId)
+        : [...prev.staff_ids, staffId],
+    }));
+  };
+
+  const handleAddStaff = async () => {
+    if (!newStaffName.trim()) return;
+    setAddingStaff(true);
+    const newStaff = await onAddStaff(newStaffName.trim());
+    if (newStaff) {
+      setForm((prev) => ({
+        ...prev,
+        staff_ids: [...prev.staff_ids, newStaff.id],
+      }));
+      setNewStaffName("");
+    }
+    setAddingStaff(false);
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>{service ? "Edit Service" : "Add Service"}</DialogTitle>
+          <DialogTitle>
+            {service ? "Edit Service" : "Add Service"}
+          </DialogTitle>
           <DialogDescription>
             {service
               ? "Update the service details below."
@@ -141,37 +190,30 @@ function ServiceDialog({
               />
             </div>
             <div className="space-y-1.5">
-              <Label>Duration</Label>
-              <Input
-                value={form.duration}
-                onChange={(e) => update("duration", e.target.value)}
-                placeholder="e.g. 1.5 hrs"
-              />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label>Price</Label>
+              <Label>Duration (minutes)</Label>
               <Input
                 type="number"
-                value={form.price || ""}
-                onChange={(e) => update("price", Number(e.target.value))}
-                placeholder="0"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Availability</Label>
-              <Input
-                value={form.availability}
-                onChange={(e) => update("availability", e.target.value)}
-                placeholder="e.g. Mon–Sat"
+                value={form.duration_minutes || ""}
+                onChange={(e) =>
+                  update("duration_minutes", Number(e.target.value))
+                }
+                placeholder="30"
               />
             </div>
           </div>
           <div className="space-y-1.5">
+            <Label>Price</Label>
+            <Input
+              type="number"
+              value={form.price || ""}
+              onChange={(e) => update("price", Number(e.target.value))}
+              placeholder="0"
+            />
+          </div>
+          <div className="space-y-1.5">
             <Label>Description</Label>
             <Textarea
-              value={form.description}
+              value={form.description || ""}
               onChange={(e) => update("description", e.target.value)}
               className="min-h-[60px]"
             />
@@ -181,24 +223,45 @@ function ServiceDialog({
             <div className="flex flex-wrap gap-2">
               {staffOptions.map((s) => (
                 <button
-                  key={s}
+                  key={s.id}
                   type="button"
-                  onClick={() => {
-                    const staff = form.staff.includes(s)
-                      ? form.staff.filter((x) => x !== s)
-                      : [...form.staff, s];
-                    update("staff", staff);
-                  }}
+                  onClick={() => toggleStaff(s.id)}
                   className={cn(
                     "rounded-md border px-2.5 py-1 text-xs font-medium transition-colors",
-                    form.staff.includes(s)
+                    form.staff_ids.includes(s.id)
                       ? "border-[var(--cedar)] bg-[var(--mist)] text-[var(--cedar)]"
                       : "border-[var(--slate)] text-[var(--ash)] hover:border-[var(--border-strong)]",
                   )}
                 >
-                  {s}
+                  {s.name}
                 </button>
               ))}
+            </div>
+            {/* Inline add staff */}
+            <div className="flex items-center gap-2 mt-2">
+              <Input
+                value={newStaffName}
+                onChange={(e) => setNewStaffName(e.target.value)}
+                placeholder="Add staff member..."
+                className="text-xs"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    void handleAddStaff();
+                  }
+                }}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => void handleAddStaff()}
+                disabled={!newStaffName.trim() || addingStaff}
+                className="shrink-0 gap-1"
+              >
+                <Plus className="h-3 w-3" />
+                Add
+              </Button>
             </div>
           </div>
         </div>
@@ -231,21 +294,26 @@ function ProductDialog({
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  product: Product | null;
-  onSave: (data: Omit<Product, "id">) => void;
+  product: ProductRow | null;
+  onSave: (data: Omit<ProductRow, "id" | "tenant_id" | "is_active">) => void;
 }) {
-  const [form, setForm] = useState<Omit<Product, "id">>(
+  const [form, setForm] = useState<Omit<ProductRow, "id" | "tenant_id" | "is_active">>(
     product ?? emptyProduct,
   );
 
-  const update = (field: string, value: unknown) =>
+  const update = (
+    field: string,
+    value: unknown,
+  ) =>
     setForm((prev) => ({ ...prev, [field]: value }));
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>{product ? "Edit Product" : "Add Product"}</DialogTitle>
+          <DialogTitle>
+            {product ? "Edit Product" : "Add Product"}
+          </DialogTitle>
           <DialogDescription>
             {product
               ? "Update the product details below."
@@ -265,7 +333,7 @@ function ProductDialog({
             <div className="space-y-1.5">
               <Label>Category</Label>
               <Input
-                value={form.category}
+                value={form.category || ""}
                 onChange={(e) => update("category", e.target.value)}
                 placeholder="e.g. Skincare"
               />
@@ -285,8 +353,10 @@ function ProductDialog({
               <Label>Stock quantity</Label>
               <Input
                 type="number"
-                value={form.stock || ""}
-                onChange={(e) => update("stock", Number(e.target.value))}
+                value={form.stock_quantity || ""}
+                onChange={(e) =>
+                  update("stock_quantity", Number(e.target.value))
+                }
                 placeholder="0"
               />
             </div>
@@ -295,9 +365,9 @@ function ProductDialog({
             <Label>Low stock threshold</Label>
             <Input
               type="number"
-              value={form.lowStockThreshold || ""}
+              value={form.low_stock_threshold || ""}
               onChange={(e) =>
-                update("lowStockThreshold", Number(e.target.value))
+                update("low_stock_threshold", Number(e.target.value))
               }
               placeholder="10"
             />
@@ -308,7 +378,7 @@ function ProductDialog({
           <div className="space-y-1.5">
             <Label>Description</Label>
             <Textarea
-              value={form.description}
+              value={form.description || ""}
               onChange={(e) => update("description", e.target.value)}
               className="min-h-[60px]"
             />
@@ -347,89 +417,304 @@ function ProductDialog({
 // ── Main Component ──
 
 export function OfferingsTab() {
-  // Dev toggle — in production this comes from useTenant().businessType
-  const [variant, setVariant] = useState<"service" | "product">("service");
+  const tenant = useTenant();
+  const isService = tenant.businessType === "Service";
 
-  const [services, setServices] = useState(mockServices);
-  const [products, setProducts] = useState(mockProducts);
+  // Loading state
+  const [loading, setLoading] = useState(true);
 
-  const [editingService, setEditingService] = useState<Service | null>(null);
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [services, setServices] = useState<ServiceRow[]>([]);
+  const [products, setProducts] = useState<ProductRow[]>([]);
+  const [staffOptions, setStaffOptions] = useState<StaffRow[]>([]);
+
+  const [editingService, setEditingService] = useState<ServiceRow | null>(
+    null,
+  );
+  const [editingProduct, setEditingProduct] = useState<ProductRow | null>(
+    null,
+  );
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  const toggleService = (id: string) =>
+  // Fetch data from Supabase
+  const fetchData = useCallback(async () => {
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
+    // Fetch staff
+    const { data: staffRows } = await supabase
+      .from("staff")
+      .select("id, name, is_active")
+      .eq("tenant_id", user.id);
+
+    setStaffOptions(staffRows || []);
+
+    if (isService) {
+      // Fetch services with staff assignments
+      const { data: svcRows } = await supabase
+        .from("services")
+        .select("*, service_staff(staff_id)")
+        .eq("tenant_id", user.id);
+
+      if (svcRows) {
+        setServices(
+          svcRows.map((s) => ({
+            id: s.id,
+            tenant_id: s.tenant_id,
+            name: s.name,
+            description: s.description,
+            duration_minutes: s.duration_minutes,
+            price: s.price,
+            is_active: s.is_active,
+            staff_ids: (s.service_staff || []).map(
+              (ss: { staff_id: string }) => ss.staff_id,
+            ),
+          })),
+        );
+      }
+    } else {
+      // Fetch products
+      const { data: prodRows } = await supabase
+        .from("products")
+        .select("*")
+        .eq("tenant_id", user.id);
+
+      if (prodRows) {
+        setProducts(prodRows);
+      }
+    }
+
+    setLoading(false);
+  }, [isService]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void fetchData();
+  }, [fetchData]);
+
+  // ── Service CRUD ──
+
+  const toggleService = async (id: string) => {
+    const svc = services.find((s) => s.id === id);
+    if (!svc) return;
+    const supabase = createClient();
+    await supabase
+      .from("services")
+      .update({ is_active: !svc.is_active })
+      .eq("id", id);
     setServices((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, active: !s.active } : s)),
+      prev.map((s) => (s.id === id ? { ...s, is_active: !s.is_active } : s)),
     );
+  };
 
-  const toggleProduct = (id: string) =>
-    setProducts((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, active: !p.active } : p)),
-    );
-
-  const deleteService = (id: string) =>
+  const deleteService = async (id: string) => {
+    const supabase = createClient();
+    await supabase.from("services").delete().eq("id", id);
     setServices((prev) => prev.filter((s) => s.id !== id));
+  };
 
-  const deleteProduct = (id: string) =>
-    setProducts((prev) => prev.filter((p) => p.id !== id));
+  const saveService = async (
+    data: Omit<ServiceRow, "id" | "tenant_id" | "is_active">,
+  ) => {
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return;
 
-  const saveService = (data: Omit<Service, "id">) => {
     if (editingService) {
+      // Update existing
+      await supabase
+        .from("services")
+        .update({
+          name: data.name,
+          description: data.description || null,
+          duration_minutes: data.duration_minutes,
+          price: data.price,
+        })
+        .eq("id", editingService.id);
+
+      // Replace staff assignments
+      await supabase
+        .from("service_staff")
+        .delete()
+        .eq("service_id", editingService.id);
+
+      if (data.staff_ids.length > 0) {
+        await supabase.from("service_staff").insert(
+          data.staff_ids.map((staffId) => ({
+            service_id: editingService.id,
+            staff_id: staffId,
+          })),
+        );
+      }
+
       setServices((prev) =>
         prev.map((s) =>
-          s.id === editingService.id ? { ...data, id: s.id } : s,
+          s.id === editingService.id
+            ? { ...data, id: s.id, tenant_id: s.tenant_id, is_active: s.is_active }
+            : s,
         ),
       );
     } else {
-      setServices((prev) => [...prev, { ...data, id: `s-${Date.now()}` }]);
+      // Insert new
+      const { data: newSvc } = await supabase
+        .from("services")
+        .insert({
+          tenant_id: user.id,
+          name: data.name,
+          description: data.description || null,
+          duration_minutes: data.duration_minutes,
+          price: data.price,
+        })
+        .select()
+        .single();
+
+      if (newSvc) {
+        if (data.staff_ids.length > 0) {
+          await supabase.from("service_staff").insert(
+            data.staff_ids.map((staffId) => ({
+              service_id: newSvc.id,
+              staff_id: staffId,
+            })),
+          );
+        }
+
+        setServices((prev) => [
+          ...prev,
+          {
+            ...data,
+            id: newSvc.id,
+            tenant_id: user.id,
+            is_active: true,
+          },
+        ]);
+      }
     }
     setEditingService(null);
   };
 
-  const saveProduct = (data: Omit<Product, "id">) => {
+  // ── Product CRUD ──
+
+  const toggleProduct = async (id: string) => {
+    const prod = products.find((p) => p.id === id);
+    if (!prod) return;
+    const supabase = createClient();
+    await supabase
+      .from("products")
+      .update({ is_active: !prod.is_active })
+      .eq("id", id);
+    setProducts((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, is_active: !p.is_active } : p)),
+    );
+  };
+
+  const deleteProduct = async (id: string) => {
+    const supabase = createClient();
+    await supabase.from("products").delete().eq("id", id);
+    setProducts((prev) => prev.filter((p) => p.id !== id));
+  };
+
+  const saveProduct = async (
+    data: Omit<ProductRow, "id" | "tenant_id" | "is_active">,
+  ) => {
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return;
+
     if (editingProduct) {
+      // Update existing
+      await supabase
+        .from("products")
+        .update({
+          name: data.name,
+          description: data.description || null,
+          price: data.price,
+          stock_quantity: data.stock_quantity,
+          low_stock_threshold: data.low_stock_threshold,
+          category: data.category || null,
+        })
+        .eq("id", editingProduct.id);
+
       setProducts((prev) =>
         prev.map((p) =>
-          p.id === editingProduct.id ? { ...data, id: p.id } : p,
+          p.id === editingProduct.id
+            ? { ...data, id: p.id, tenant_id: p.tenant_id, is_active: p.is_active }
+            : p,
         ),
       );
     } else {
-      setProducts((prev) => [...prev, { ...data, id: `p-${Date.now()}` }]);
+      // Insert new
+      const { data: newProd } = await supabase
+        .from("products")
+        .insert({
+          tenant_id: user.id,
+          name: data.name,
+          description: data.description || null,
+          price: data.price,
+          stock_quantity: data.stock_quantity,
+          low_stock_threshold: data.low_stock_threshold,
+          category: data.category || null,
+        })
+        .select()
+        .single();
+
+      if (newProd) {
+        setProducts((prev) => [
+          ...prev,
+          {
+            ...data,
+            id: newProd.id,
+            tenant_id: user.id,
+            is_active: true,
+          },
+        ]);
+      }
     }
     setEditingProduct(null);
   };
 
+  // ── Staff inline add ──
+
+  const addStaff = async (name: string): Promise<StaffRow | null> => {
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return null;
+
+    const { data: newStaff } = await supabase
+      .from("staff")
+      .insert({ tenant_id: user.id, name })
+      .select()
+      .single();
+
+    if (newStaff) {
+      setStaffOptions((prev) => [...prev, newStaff]);
+      return newStaff;
+    }
+    return null;
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <RefreshCw className="h-5 w-5 text-[var(--ash)] animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      {/* Dev toggle */}
-      <div className="rounded-lg border border-dashed border-[var(--amber)]/40 bg-[var(--amber)]/5 px-4 py-3">
-        <p className="text-xs font-medium text-[var(--amber)] mb-2">
-          Dev preview toggle
-        </p>
-        <div className="flex gap-2">
-          <Button
-            size="sm"
-            variant={variant === "service" ? "default" : "outline"}
-            onClick={() => setVariant("service")}
-            className="gap-1.5"
-          >
-            <Scissors className="h-3.5 w-3.5" />
-            Service variant
-          </Button>
-          <Button
-            size="sm"
-            variant={variant === "product" ? "default" : "outline"}
-            onClick={() => setVariant("product")}
-            className="gap-1.5"
-          >
-            <Package className="h-3.5 w-3.5" />
-            Product variant
-          </Button>
-        </div>
-      </div>
-
       {/* ── Service Variant ── */}
-      {variant === "service" && (
+      {isService && (
         <section>
           <SectionHeading
             icon={Scissors}
@@ -440,7 +725,8 @@ export function OfferingsTab() {
             <CardContent className="p-5">
               <div className="flex items-center justify-between mb-4">
                 <p className="text-sm text-[var(--ash)]">
-                  {services.length} service{services.length !== 1 ? "s" : ""}
+                  {services.length} service
+                  {services.length !== 1 ? "s" : ""}
                 </p>
                 <Button
                   size="sm"
@@ -462,7 +748,6 @@ export function OfferingsTab() {
                     <TableHead>Duration</TableHead>
                     <TableHead>Price</TableHead>
                     <TableHead>Staff</TableHead>
-                    <TableHead>Availability</TableHead>
                     <TableHead className="w-20">Active</TableHead>
                     <TableHead className="w-20" />
                   </TableRow>
@@ -471,38 +756,46 @@ export function OfferingsTab() {
                   {services.map((s) => (
                     <TableRow
                       key={s.id}
-                      className={cn(!s.active && "opacity-50")}
+                      className={cn(!s.is_active && "opacity-50")}
                     >
                       <TableCell>
                         <div>
-                          <p className="font-medium text-[var(--ink)]">{s.name}</p>
+                          <p className="font-medium text-[var(--ink)]">
+                            {s.name}
+                          </p>
                           <p className="text-xs text-[var(--ash)] truncate max-w-[200px]">
                             {s.description}
                           </p>
                         </div>
                       </TableCell>
                       <TableCell className="text-xs font-[family-name:var(--font-jetbrains-mono)] text-[var(--ash)]">
-                        {s.duration}
+                        {s.duration_minutes} min
                       </TableCell>
                       <TableCell className="text-sm font-medium font-[family-name:var(--font-jetbrains-mono)] text-[var(--ink)]">
                         ${s.price}
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-wrap gap-1">
-                          {s.staff.map((st) => (
-                            <Badge key={st} variant="secondary" className="text-[10px]">
-                              {st}
-                            </Badge>
-                          ))}
+                          {s.staff_ids.map((staffId) => {
+                            const staff = staffOptions.find(
+                              (st) => st.id === staffId,
+                            );
+                            return (
+                              <Badge
+                                key={staffId}
+                                variant="secondary"
+                                className="text-[10px]"
+                              >
+                                {staff?.name || "Unknown"}
+                              </Badge>
+                            );
+                          })}
                         </div>
-                      </TableCell>
-                      <TableCell className="text-xs text-[var(--ash)]">
-                        {s.availability}
                       </TableCell>
                       <TableCell>
                         <Switch
-                          checked={s.active}
-                          onCheckedChange={() => toggleService(s.id)}
+                          checked={s.is_active}
+                          onCheckedChange={() => void toggleService(s.id)}
                         />
                       </TableCell>
                       <TableCell>
@@ -517,7 +810,7 @@ export function OfferingsTab() {
                             <Edit className="h-3.5 w-3.5 text-[var(--ash)]" />
                           </button>
                           <button
-                            onClick={() => deleteService(s.id)}
+                            onClick={() => void deleteService(s.id)}
                             className="p-1.5 rounded hover:bg-hover-bg transition-colors"
                           >
                             <Trash2 className="h-3.5 w-3.5 text-[var(--ash)]" />
@@ -538,13 +831,15 @@ export function OfferingsTab() {
               if (!v) setEditingService(null);
             }}
             service={editingService}
-            onSave={saveService}
+            staffOptions={staffOptions}
+            onSave={(data) => void saveService(data)}
+            onAddStaff={addStaff}
           />
         </section>
       )}
 
       {/* ── Product Variant ── */}
-      {variant === "product" && (
+      {!isService && (
         <section>
           <SectionHeading
             icon={Package}
@@ -555,14 +850,23 @@ export function OfferingsTab() {
             <CardContent className="p-5">
               <div className="flex items-center justify-between mb-4">
                 <p className="text-sm text-[var(--ash)]">
-                  {products.length} product{products.length !== 1 ? "s" : ""}
+                  {products.length} product
+                  {products.length !== 1 ? "s" : ""}
                   {" · "}
                   <span className="text-[var(--ember)]">
-                    {products.filter((p) => p.stock <= p.lowStockThreshold && p.stock > 0).length} low stock
+                    {
+                      products.filter(
+                        (p) =>
+                          p.stock_quantity <= p.low_stock_threshold &&
+                          p.stock_quantity > 0,
+                      ).length
+                    }{" "}
+                    low stock
                   </span>
                   {" · "}
                   <span className="text-[var(--ash)]">
-                    {products.filter((p) => p.stock === 0).length} out of stock
+                    {products.filter((p) => p.stock_quantity === 0).length} out
+                    of stock
                   </span>
                 </p>
                 <Button
@@ -592,13 +896,14 @@ export function OfferingsTab() {
                 <TableBody>
                   {products.map((p) => {
                     const isLowStock =
-                      p.stock > 0 && p.stock <= p.lowStockThreshold;
-                    const isOut = p.stock === 0;
+                      p.stock_quantity > 0 &&
+                      p.stock_quantity <= p.low_stock_threshold;
+                    const isOut = p.stock_quantity === 0;
 
                     return (
                       <TableRow
                         key={p.id}
-                        className={cn(!p.active && "opacity-50")}
+                        className={cn(!p.is_active && "opacity-50")}
                       >
                         <TableCell>
                           <div>
@@ -618,15 +923,22 @@ export function OfferingsTab() {
                             <span
                               className={cn(
                                 "text-sm font-[family-name:var(--font-jetbrains-mono)]",
-                                isOut && "text-[var(--ember)] font-semibold",
-                                isLowStock && "text-[var(--amber)] font-semibold",
-                                !isOut && !isLowStock && "text-[var(--ink)]",
+                                isOut &&
+                                  "text-[var(--ember)] font-semibold",
+                                isLowStock &&
+                                  "text-[var(--amber)] font-semibold",
+                                !isOut &&
+                                  !isLowStock &&
+                                  "text-[var(--ink)]",
                               )}
                             >
-                              {p.stock}
+                              {p.stock_quantity}
                             </span>
                             {isOut && (
-                              <Badge variant="destructive" className="text-[10px]">
+                              <Badge
+                                variant="destructive"
+                                className="text-[10px]"
+                              >
                                 Out of stock
                               </Badge>
                             )}
@@ -645,8 +957,8 @@ export function OfferingsTab() {
                         </TableCell>
                         <TableCell>
                           <Switch
-                            checked={p.active}
-                            onCheckedChange={() => toggleProduct(p.id)}
+                            checked={p.is_active}
+                            onCheckedChange={() => void toggleProduct(p.id)}
                           />
                         </TableCell>
                         <TableCell>
@@ -661,7 +973,7 @@ export function OfferingsTab() {
                               <Edit className="h-3.5 w-3.5 text-[var(--ash)]" />
                             </button>
                             <button
-                              onClick={() => deleteProduct(p.id)}
+                              onClick={() => void deleteProduct(p.id)}
                               className="p-1.5 rounded hover:bg-hover-bg transition-colors"
                             >
                               <Trash2 className="h-3.5 w-3.5 text-[var(--ash)]" />
@@ -683,7 +995,7 @@ export function OfferingsTab() {
               if (!v) setEditingProduct(null);
             }}
             product={editingProduct}
-            onSave={saveProduct}
+            onSave={(data) => void saveProduct(data)}
           />
         </section>
       )}

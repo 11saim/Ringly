@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   AlertTriangle,
   Flag,
   MessageSquareWarning,
+  RefreshCw,
   Shield,
   UserX,
   X,
@@ -12,7 +13,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -24,38 +24,58 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { useTenant } from "@/lib/tenant-context";
+import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
-const defaultTriggers = [
+// UI metadata for trigger types (labels, descriptions, icons)
+const triggerMeta: Record<
+  string,
   {
-    id: "refund",
+    label: string;
+    description: string;
+    icon: React.ElementType;
+  }
+> = {
+  refund_request: {
     label: "Refund request",
     description: "Customer asks for a refund or money back.",
     icon: Shield,
-    enabled: true,
   },
-  {
-    id: "angry",
+  angry_customer: {
     label: "Angry customer",
     description: "Sentiment detection — frustrated or upset language.",
     icon: MessageSquareWarning,
-    enabled: true,
   },
-  {
-    id: "cant_answer",
+  cant_answer: {
     label: "Agent can't answer",
-    description: "Confidence below threshold or topic not in knowledge base.",
+    description:
+      "Confidence below threshold or topic not in knowledge base.",
     icon: AlertTriangle,
-    enabled: true,
   },
-  {
-    id: "ask_human",
+  asks_for_human: {
     label: "Customer asks for a human",
-    description: "Explicit request like 'speak to someone' or 'talk to a person'.",
+    description:
+      "Explicit request like 'speak to someone' or 'talk to a person'.",
     icon: UserX,
-    enabled: false,
   },
+};
+
+const defaultTriggerTypes = [
+  "refund_request",
+  "angry_customer",
+  "cant_answer",
+  "asks_for_human",
 ];
+
+interface Trigger {
+  id: string;
+  dbType: string;
+  label: string;
+  description: string;
+  icon: React.ElementType;
+  enabled: boolean;
+  customPhrase?: string;
+}
 
 function SectionHeading({
   icon: Icon,
@@ -85,22 +105,18 @@ export function PoliciesTab() {
   const tenant = useTenant();
   const isProduct = tenant.businessType === "Product";
 
+  // Loading state
+  const [loading, setLoading] = useState(true);
+
   // Policies
-  const [cancellationPolicy, setCancellationPolicy] = useState(
-    "Customers may cancel or reschedule up to 24 hours before their appointment at no charge. Cancellations within 24 hours incur a 50% fee. No-shows are charged in full.",
-  );
-  const [refundPolicy, setRefundPolicy] = useState(
-    "Full refund within 7 days of purchase with receipt. Store credit within 14 days. No refunds on opened or used products. Sale items are final sale.",
-  );
+  const [cancellationPolicy, setCancellationPolicy] = useState("");
+  const [refundPolicy, setRefundPolicy] = useState("");
 
   // Triggers
-  const [triggers, setTriggers] = useState(defaultTriggers);
+  const [triggers, setTriggers] = useState<Trigger[]>([]);
 
   // Custom trigger phrases
-  const [customPhrases, setCustomPhrases] = useState<string[]>([
-    "speak to manager",
-    "this is unacceptable",
-  ]);
+  const [customPhrases, setCustomPhrases] = useState<string[]>([]);
   const [phraseInput, setPhraseInput] = useState("");
 
   // Escalation contact
@@ -109,9 +125,84 @@ export function PoliciesTab() {
   // Save state
   const [saving, setSaving] = useState(false);
 
-  const toggleTrigger = (id: string) => {
+  // Fetch data from Supabase
+  const fetchData = useCallback(async () => {
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
+    // 1. Fetch policies row
+    const { data: policies } = await supabase
+      .from("policies")
+      .select("cancellation_policy, refund_policy, escalation_notify_target")
+      .eq("tenant_id", user.id)
+      .single();
+
+    if (policies) {
+      setCancellationPolicy(policies.cancellation_policy || "");
+      setRefundPolicy(policies.refund_policy || "");
+      setEscalationContact(policies.escalation_notify_target || "inbox");
+    }
+
+    // 2. Fetch escalation triggers
+    const { data: dbTriggers } = await supabase
+      .from("escalation_triggers")
+      .select("id, trigger_type, custom_phrase, is_enabled")
+      .eq("tenant_id", user.id);
+
+    // Build triggers array: merge DB data with UI metadata
+    const triggersMap = new Map<string, Trigger>();
+
+    // Start with default trigger types
+    for (const t of defaultTriggerTypes) {
+      const meta = triggerMeta[t];
+      triggersMap.set(t, {
+        id: t,
+        dbType: t,
+        label: meta.label,
+        description: meta.description,
+        icon: meta.icon,
+        enabled: false,
+      });
+    }
+
+    // Apply DB state
+    if (dbTriggers) {
+      for (const dt of dbTriggers) {
+        if (dt.trigger_type === "custom") {
+          // Custom triggers go to customPhrases
+          if (dt.custom_phrase) {
+            setCustomPhrases((prev) => [...prev, dt.custom_phrase!]);
+          }
+        } else {
+          const existing = triggersMap.get(dt.trigger_type);
+          if (existing) {
+            existing.enabled = dt.is_enabled;
+            existing.id = dt.id;
+          }
+        }
+      }
+    }
+
+    setTriggers(Array.from(triggersMap.values()));
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void fetchData();
+  }, [fetchData]);
+
+  const toggleTrigger = (dbType: string) => {
     setTriggers((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, enabled: !t.enabled } : t)),
+      prev.map((t) =>
+        t.dbType === dbType ? { ...t, enabled: !t.enabled } : t,
+      ),
     );
   };
 
@@ -127,10 +218,77 @@ export function PoliciesTab() {
     setCustomPhrases((prev) => prev.filter((p) => p !== phrase));
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     setSaving(true);
-    setTimeout(() => setSaving(false), 1200);
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      setSaving(false);
+      return;
+    }
+
+    // 1. Upsert policies
+    const { error: polErr } = await supabase.from("policies").upsert(
+      {
+        tenant_id: user.id,
+        cancellation_policy: cancellationPolicy || null,
+        refund_policy: refundPolicy || null,
+        escalation_notify_target: escalationContact || null,
+      },
+      { onConflict: "tenant_id" },
+    );
+    if (polErr) console.error("Failed to save policies:", polErr);
+
+    // 2. Delete all existing triggers
+    const { error: delErr } = await supabase
+      .from("escalation_triggers")
+      .delete()
+      .eq("tenant_id", user.id);
+    if (delErr) console.error("Failed to delete triggers:", delErr);
+
+    // 3. Insert enabled triggers
+    const enabledTriggers = triggers.filter((t) => t.enabled);
+    if (enabledTriggers.length > 0) {
+      const { error: insErr } = await supabase
+        .from("escalation_triggers")
+        .insert(
+          enabledTriggers.map((t) => ({
+            tenant_id: user.id,
+            trigger_type: t.dbType,
+            custom_phrase: null,
+            is_enabled: true,
+          })),
+        );
+      if (insErr) console.error("Failed to insert triggers:", insErr);
+    }
+
+    // 4. Insert custom phrase triggers
+    if (customPhrases.length > 0) {
+      const { error: custErr } = await supabase
+        .from("escalation_triggers")
+        .insert(
+          customPhrases.map((phrase) => ({
+            tenant_id: user.id,
+            trigger_type: "custom",
+            custom_phrase: phrase,
+            is_enabled: true,
+          })),
+        );
+      if (custErr) console.error("Failed to insert custom triggers:", custErr);
+    }
+
+    setSaving(false);
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <RefreshCw className="h-5 w-5 text-[var(--ash)] animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 pb-24">
@@ -149,8 +307,8 @@ export function PoliciesTab() {
               className="min-h-[100px] text-sm"
             />
             <p className="text-[10px] text-[var(--ash)]">
-              Be specific about timeframes and fees — the agent will quote
-              this policy directly.
+              Be specific about timeframes and fees — the agent will quote this
+              policy directly.
             </p>
           </CardContent>
         </Card>
@@ -192,7 +350,7 @@ export function PoliciesTab() {
             {triggers.map((trigger, i) => {
               const Icon = trigger.icon;
               return (
-                <div key={trigger.id}>
+                <div key={trigger.dbType}>
                   <div className="flex items-start gap-4 py-3.5">
                     <div
                       className={cn(
@@ -214,7 +372,7 @@ export function PoliciesTab() {
                     </div>
                     <Switch
                       checked={trigger.enabled}
-                      onCheckedChange={() => toggleTrigger(trigger.id)}
+                      onCheckedChange={() => toggleTrigger(trigger.dbType)}
                     />
                   </div>
                   {i < triggers.length - 1 && <Separator />}
@@ -280,8 +438,9 @@ export function PoliciesTab() {
               </Button>
             </div>
             <p className="text-[10px] text-[var(--ash)]">
-              {customPhrases.length} phrase{customPhrases.length !== 1 ? "s" : ""} configured.
-              Phrases are matched case-insensitively.
+              {customPhrases.length} phrase
+              {customPhrases.length !== 1 ? "s" : ""} configured. Phrases are
+              matched case-insensitively.
             </p>
           </CardContent>
         </Card>
@@ -297,7 +456,10 @@ export function PoliciesTab() {
         <Card>
           <CardContent className="p-5">
             <div className="max-w-sm space-y-3">
-              <Select value={escalationContact} onValueChange={setEscalationContact}>
+              <Select
+                value={escalationContact}
+                onValueChange={setEscalationContact}
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>

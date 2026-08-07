@@ -1,27 +1,24 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { createClient } from "@/lib/supabase/client";
 import {
   Bot,
   Clock,
   FileText,
   MessageSquare,
-  Phone,
-  Plus,
   Search,
   Shield,
   ShieldOff,
   Tag,
   User,
   Users,
-  X,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import {
   Sheet,
@@ -39,8 +36,67 @@ import {
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
-import { mockContacts, type Contact } from "@/lib/data";
 import { cn } from "@/lib/utils";
+
+// ── Types ──
+
+interface DbContact {
+  id: string;
+  phone: string;
+  name: string | null;
+  first_contact_at: string;
+  last_contact_at: string;
+  is_blocked: boolean;
+  notes: string | null;
+}
+
+interface DisplayContact {
+  id: string;
+  name: string;
+  phone: string;
+  initials: string;
+  firstContact: string;
+  lastContact: string;
+  tags: string[];
+  totalSpend: number;
+  bookingCount: number;
+  blocked: boolean;
+  notes: string[];
+  chatHistory: {
+    sender: "agent" | "customer" | "human";
+    text: string;
+    time: string;
+  }[];
+  bookingHistory: {
+    service: string;
+    date: string;
+    status: string;
+    amount: number;
+  }[];
+}
+
+interface DbBookingRow {
+  id: string;
+  scheduled_at: string;
+  duration_minutes: number;
+  status: string;
+  services: { name: string }[] | null;
+}
+
+interface DbConversationRow {
+  id: string;
+  status: string;
+  started_at: string;
+}
+
+interface DbMessageRow {
+  id: string;
+  sender_type: "customer" | "agent" | "human_staff";
+  content: string;
+  created_at: string;
+}
+
+// ── Helpers ──
 
 const tagColors: Record<string, string> = {
   Regular: "bg-[var(--mist)] text-[var(--cedar)]",
@@ -52,18 +108,145 @@ const tagColors: Record<string, string> = {
 
 const allTags = ["Regular", "VIP", "New", "Corporate", "Blocked"];
 
+function deriveInitials(name: string | null, phone: string): string {
+  if (name) {
+    return name
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((w) => w[0].toUpperCase())
+      .join("");
+  }
+  return phone.slice(-2);
+}
+
+function deriveTags(
+  isBlocked: boolean,
+  totalSpend: number,
+  bookingCount: number,
+  firstContactAt: string,
+): string[] {
+  const tags: string[] = [];
+  if (isBlocked) tags.push("Blocked");
+  if (totalSpend > 500) tags.push("VIP");
+  else if (bookingCount > 2) tags.push("Regular");
+  const daysSinceFirst =
+    (Date.now() - new Date(firstContactAt).getTime()) / 86400000;
+  if (daysSinceFirst < 30) tags.push("New");
+  return tags;
+}
+
+function formatRelativeDate(dateStr: string): string {
+  const d = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - d.getTime();
+  const diffMin = Math.floor(diffMs / 60000);
+  const diffHr = Math.floor(diffMs / 3600000);
+  const diffDay = Math.floor(diffMs / 86400000);
+
+  if (diffMin < 1) return "Just now";
+  if (diffMin < 60) return `${diffMin}m ago`;
+  if (diffHr < 24) return `${diffHr}h ago`;
+  if (diffDay === 1) return "Yesterday";
+  if (diffDay < 7) return `${diffDay}d ago`;
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+function formatFullDate(dateStr: string): string {
+  return new Date(dateStr).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function parseNotes(notesRaw: string | null): string[] {
+  if (!notesRaw) return [];
+  return notesRaw.split("\n").filter((n) => n.trim().length > 0);
+}
+
+function formatNotesForSave(notes: string[]): string {
+  return notes.join("\n");
+}
+
+function mapDbContact(
+  db: DbContact,
+  bookingCount: number,
+  totalSpend: number,
+): DisplayContact {
+  return {
+    id: db.id,
+    name: db.name || "Unknown",
+    phone: db.phone,
+    initials: deriveInitials(db.name, db.phone),
+    firstContact: formatFullDate(db.first_contact_at),
+    lastContact: formatRelativeDate(db.last_contact_at),
+    tags: deriveTags(db.is_blocked, totalSpend, bookingCount, db.first_contact_at),
+    totalSpend,
+    bookingCount,
+    blocked: db.is_blocked,
+    notes: parseNotes(db.notes),
+    chatHistory: [],
+    bookingHistory: [],
+  };
+}
+
+// ── Component ──
+
 export default function ContactsPage() {
+  const supabase = useMemo(() => createClient(), []);
+
   const [loading, setLoading] = useState(true);
-  const [contacts, setContacts] = useState(mockContacts);
+  const [contacts, setContacts] = useState<DisplayContact[]>([]);
   const [search, setSearch] = useState("");
   const [tagFilter, setTagFilter] = useState<string | null>(null);
-  const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
+  const [selectedContact, setSelectedContact] =
+    useState<DisplayContact | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
   const [noteInput, setNoteInput] = useState("");
 
+  // ── Fetch contacts + aggregates ──
+
+  const fetchContacts = useCallback(async () => {
+    setLoading(true);
+
+    const [contactsResult, bookingsResult, ordersResult] = await Promise.all([
+      supabase
+        .from("contacts")
+        .select("id, phone, name, first_contact_at, last_contact_at, is_blocked, notes")
+        .order("last_contact_at", { ascending: false }),
+      supabase.from("bookings").select("contact_id"),
+      supabase.from("orders").select("contact_id, total_amount"),
+    ]);
+
+    const dbContacts = (contactsResult.data ?? []) as DbContact[];
+
+    // Compute aggregates per contact
+    const bookingCounts: Record<string, number> = {};
+    for (const b of bookingsResult.data ?? []) {
+      bookingCounts[b.contact_id] = (bookingCounts[b.contact_id] ?? 0) + 1;
+    }
+
+    const totalSpends: Record<string, number> = {};
+    for (const o of ordersResult.data ?? []) {
+      totalSpends[o.contact_id] =
+        (totalSpends[o.contact_id] ?? 0) + Number(o.total_amount);
+    }
+
+    setContacts(
+      dbContacts.map((c) =>
+        mapDbContact(c, bookingCounts[c.id] ?? 0, totalSpends[c.id] ?? 0),
+      ),
+    );
+    setLoading(false);
+  }, [supabase]);
+
   useEffect(() => {
-    const t = setTimeout(() => setLoading(false), 500);
-    return () => clearTimeout(t);
-  }, []);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchContacts();
+  }, [fetchContacts]);
+
+  // ── Filtered list ──
 
   const filtered = useMemo(() => {
     return contacts.filter((c) => {
@@ -76,49 +259,139 @@ export default function ContactsPage() {
     });
   }, [contacts, search, tagFilter]);
 
-  const toggleBlock = (id: string) => {
-    setContacts((prev) =>
-      prev.map((c) =>
-        c.id === id
-          ? {
-              ...c,
-              blocked: !c.blocked,
-              tags: c.blocked
-                ? c.tags.filter((t) => t !== "Blocked")
-                : [...c.tags, "Blocked"],
-            }
-          : c,
-      ),
-    );
-    // Update selected if open
-    setSelectedContact((prev) =>
-      prev && prev.id === id
-        ? {
-            ...prev,
-            blocked: !prev.blocked,
-            tags: prev.blocked
-              ? prev.tags.filter((t) => t !== "Blocked")
-              : [...prev.tags, "Blocked"],
-          }
-        : prev,
-    );
-  };
+  // ── Block / Unblock ──
 
-  const addNote = () => {
+  const toggleBlock = useCallback(
+    async (id: string) => {
+      const contact = contacts.find((c) => c.id === id);
+      if (!contact) return;
+
+      const newBlocked = !contact.blocked;
+      const { error } = await supabase
+        .from("contacts")
+        .update({ is_blocked: newBlocked })
+        .eq("id", id);
+
+      if (error) return;
+
+      // Derive new tags for this contact
+      const updatedContact: DisplayContact = {
+        ...contact,
+        blocked: newBlocked,
+        tags: newBlocked
+          ? [...contact.tags.filter((t) => t !== "Blocked"), "Blocked"]
+          : contact.tags.filter((t) => t !== "Blocked"),
+      };
+
+      setContacts((prev) =>
+        prev.map((c) => (c.id === id ? updatedContact : c)),
+      );
+
+      setSelectedContact((prev) =>
+        prev && prev.id === id ? updatedContact : prev,
+      );
+    },
+    [contacts, supabase],
+  );
+
+  // ── Add Note ──
+
+  const addNote = useCallback(async () => {
     if (!selectedContact || !noteInput.trim()) return;
     const note = noteInput.trim();
+    const newNotes = [...selectedContact.notes, note];
+    const notesForDb = formatNotesForSave(newNotes);
+
+    const { error } = await supabase
+      .from("contacts")
+      .update({ notes: notesForDb })
+      .eq("id", selectedContact.id);
+
+    if (error) return;
+
+    const updatedContact: DisplayContact = {
+      ...selectedContact,
+      notes: newNotes,
+    };
+
     setContacts((prev) =>
-      prev.map((c) =>
-        c.id === selectedContact.id
-          ? { ...c, notes: [...c.notes, note] }
-          : c,
-      ),
+      prev.map((c) => (c.id === selectedContact.id ? updatedContact : c)),
     );
-    setSelectedContact((prev) =>
-      prev ? { ...prev, notes: [...prev.notes, note] } : prev,
-    );
+    setSelectedContact(updatedContact);
     setNoteInput("");
-  };
+  }, [selectedContact, noteInput, supabase]);
+
+  // ── Detail data loading ──
+
+  const loadContactDetail = useCallback(
+    async (contactId: string) => {
+      setDetailLoading(true);
+
+      const [bookingsResult, conversationsResult] = await Promise.all([
+        supabase
+          .from("bookings")
+          .select("id, scheduled_at, duration_minutes, status, services(name)")
+          .eq("contact_id", contactId)
+          .order("scheduled_at", { ascending: false }),
+        supabase
+          .from("conversations")
+          .select("id, status, started_at")
+          .eq("contact_id", contactId)
+          .order("started_at", { ascending: false }),
+      ]);
+
+      // Fetch messages for all conversations
+      const convos = (conversationsResult.data ?? []) as DbConversationRow[];
+      let allMessages: DbMessageRow[] = [];
+
+      if (convos.length > 0) {
+        const convIds = convos.map((c) => c.id);
+        const { data: msgs } = await supabase
+          .from("messages")
+          .select("id, sender_type, content, created_at")
+          .in("conversation_id", convIds)
+          .order("created_at", { ascending: true });
+
+        allMessages = (msgs ?? []) as DbMessageRow[];
+      }
+
+      // Map bookings to bookingHistory format
+      const dbBookings = (bookingsResult.data ?? []) as DbBookingRow[];
+      const bookingHistory = dbBookings.map((b) => ({
+        service: b.services?.[0]?.name ?? "Unknown",
+        date: formatFullDate(b.scheduled_at),
+        status: b.status.charAt(0).toUpperCase() + b.status.slice(1),
+        amount: 0, // amount not stored on bookings table directly
+      }));
+
+      // Map messages to chatHistory format
+      const chatHistory = allMessages.map((m) => ({
+        sender:
+          m.sender_type === "human_staff"
+            ? ("human" as const)
+            : (m.sender_type as "agent" | "customer"),
+        text: m.content,
+        time: formatRelativeDate(m.created_at),
+      }));
+
+      // Update the selected contact with detail data
+      setSelectedContact((prev) => {
+        if (!prev || prev.id !== contactId) return prev;
+        return { ...prev, bookingHistory, chatHistory };
+      });
+
+      setDetailLoading(false);
+    },
+    [supabase],
+  );
+
+  // When a contact is selected, load its detail data
+  useEffect(() => {
+    if (selectedContact) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      loadContactDetail(selectedContact.id);
+    }
+  }, [selectedContact, loadContactDetail]);
 
   return (
     <div className="space-y-6">
@@ -226,12 +499,12 @@ export default function ContactsPage() {
                       <p className="text-sm font-medium text-[var(--ink)]">
                         {search || tagFilter
                           ? "No contacts match your search."
-                          : "Your contact list is empty."}
+                          : "No contacts yet"}
                       </p>
-                      <p className="text-xs text-[var(--ash)] max-w-[240px]">
+                      <p className="text-xs text-[var(--ash)] max-w-[280px]">
                         {search || tagFilter
                           ? "Try adjusting your search or clearing the tag filter."
-                          : "Contacts will appear here as customers reach out on WhatsApp."}
+                          : "No contacts yet — they\u2019ll appear here once customers start messaging your WhatsApp number."}
                       </p>
                     </div>
                   </TableCell>
@@ -416,39 +689,47 @@ export default function ContactsPage() {
                       Chat History
                     </h3>
                   </div>
-                  <div className="space-y-2">
-                    {selectedContact.chatHistory.map((msg, i) => (
-                      <div
-                        key={i}
-                        className={cn(
-                          "flex",
-                          msg.sender === "customer" ? "justify-start" : "justify-end",
-                        )}
-                      >
+                  {detailLoading ? (
+                    <div className="space-y-2">
+                      {[1, 2, 3].map((i) => (
+                        <Skeleton key={i} className="h-14 w-3/4" />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {selectedContact.chatHistory.map((msg, i) => (
                         <div
+                          key={i}
                           className={cn(
-                            "max-w-[85%] rounded-lg px-3 py-2",
-                            msg.sender === "customer" && "bg-[var(--linen)] text-[var(--ink)]",
-                            msg.sender === "agent" && "bg-[var(--cedar)] text-white",
-                            msg.sender === "human" && "bg-[var(--ink)] text-white",
+                            "flex",
+                            msg.sender === "customer" ? "justify-start" : "justify-end",
                           )}
                         >
-                          <div className="flex items-center gap-1 mb-0.5">
-                            {msg.sender === "agent" && <Bot className="h-3 w-3 opacity-70" />}
-                            {msg.sender === "human" && <User className="h-3 w-3 opacity-70" />}
-                            <span className="text-[10px] opacity-70 capitalize">{msg.sender}</span>
+                          <div
+                            className={cn(
+                              "max-w-[85%] rounded-lg px-3 py-2",
+                              msg.sender === "customer" && "bg-[var(--linen)] text-[var(--ink)]",
+                              msg.sender === "agent" && "bg-[var(--cedar)] text-white",
+                              msg.sender === "human" && "bg-[var(--ink)] text-white",
+                            )}
+                          >
+                            <div className="flex items-center gap-1 mb-0.5">
+                              {msg.sender === "agent" && <Bot className="h-3 w-3 opacity-70" />}
+                              {msg.sender === "human" && <User className="h-3 w-3 opacity-70" />}
+                              <span className="text-[10px] opacity-70 capitalize">{msg.sender}</span>
+                            </div>
+                            <p className="text-xs leading-relaxed">{msg.text}</p>
+                            <p className="text-[10px] mt-0.5 opacity-50 font-[family-name:var(--font-jetbrains-mono)]">
+                              {msg.time}
+                            </p>
                           </div>
-                          <p className="text-xs leading-relaxed">{msg.text}</p>
-                          <p className="text-[10px] mt-0.5 opacity-50 font-[family-name:var(--font-jetbrains-mono)]">
-                            {msg.time}
-                          </p>
                         </div>
-                      </div>
-                    ))}
-                    {selectedContact.chatHistory.length === 0 && (
-                      <p className="text-xs text-[var(--ash)] text-center py-4">No messages yet.</p>
-                    )}
-                  </div>
+                      ))}
+                      {selectedContact.chatHistory.length === 0 && (
+                        <p className="text-xs text-[var(--ash)] text-center py-4">No messages yet.</p>
+                      )}
+                    </div>
+                  )}
                 </section>
 
                 <Separator />
@@ -461,7 +742,13 @@ export default function ContactsPage() {
                       Booking History
                     </h3>
                   </div>
-                  {selectedContact.bookingHistory.length > 0 ? (
+                  {detailLoading ? (
+                    <div className="space-y-2">
+                      {[1, 2].map((i) => (
+                        <Skeleton key={i} className="h-14 w-full" />
+                      ))}
+                    </div>
+                  ) : selectedContact.bookingHistory.length > 0 ? (
                     <div className="space-y-2">
                       {selectedContact.bookingHistory.map((b, i) => (
                         <div

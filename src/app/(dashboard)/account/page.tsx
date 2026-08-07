@@ -1,18 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import {
   AlertTriangle,
   Check,
   CheckCircle2,
   CreditCard,
-  ExternalLink,
   Eye,
   EyeOff,
   Key,
   Mail,
   MessageSquare,
-  Phone,
   RefreshCw,
   Shield,
   Trash2,
@@ -41,8 +39,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { useTenant } from "@/lib/tenant-context";
+import { createClient } from "@/lib/supabase/client";
 import { mockInvoices, type Invoice } from "@/lib/data";
 import { cn } from "@/lib/utils";
 
@@ -106,19 +104,24 @@ function SectionHeading({
 export default function AccountPage() {
   const tenant = useTenant();
 
+  // ── Data loading state ──
+  const [loading, setLoading] = useState(true);
+
   // ── WhatsApp state ──
-  const [waConnected, setWaConnected] = useState(true);
-  const [waNumber] = useState("+1 (555) 234-5678");
+  const [waConnected, setWaConnected] = useState(false);
+  const [waNumber, setWaNumber] = useState<string>("");
   const [waConnecting, setWaConnecting] = useState(false);
 
   // ── Subscription state ──
-  const [currentPlan, setCurrentPlan] = useState<string>("Growth");
+  const [currentPlan, setCurrentPlan] = useState<string>("free");
+  const [subscriptionStatus, setSubscriptionStatus] = useState<string>("active");
+  const [currentPeriodEnd, setCurrentPeriodEnd] = useState<string>("");
   const [invoices] = useState<Invoice[]>(mockInvoices);
   const [planDialogOpen, setPlanDialogOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<string>("Growth");
 
   // ── Account form state ──
-  const [email, setEmail] = useState("hello@bloomstudio.com");
+  const [email, setEmail] = useState("");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -126,37 +129,117 @@ export default function AccountPage() {
   const [showNewPw, setShowNewPw] = useState(false);
   const [emailSaved, setEmailSaved] = useState(false);
   const [pwSaved, setPwSaved] = useState(false);
+  const [pwError, setPwError] = useState<string | null>(null);
 
   // ── Danger zone state ──
   const [deleteBusinessOpen, setDeleteBusinessOpen] = useState(false);
   const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
 
-  const handleReconnect = () => {
+  const fetchData = useCallback(async () => {
+    const supabase = createClient();
+
+    // Fetch WhatsApp connection
+    const { data: waData } = await supabase
+      .from("whatsapp_connections")
+      .select("status, phone_number")
+      .single();
+
+    if (waData) {
+      setWaConnected(waData.status === "connected");
+      setWaNumber(waData.phone_number || "");
+    }
+
+    // Fetch subscription
+    const { data: subData } = await supabase
+      .from("subscriptions")
+      .select("plan_name, status, current_period_end")
+      .single();
+
+    if (subData) {
+      setCurrentPlan(subData.plan_name);
+      setSubscriptionStatus(subData.status);
+      setCurrentPeriodEnd(subData.current_period_end || "");
+    }
+
+    // Fetch user email from auth
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user?.email) {
+      setEmail(user.email);
+    }
+
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void fetchData();
+  }, [fetchData]);
+
+  const handleReconnect = async () => {
     setWaConnecting(true);
-    // Simulate Meta OAuth redirect + callback
-    setTimeout(() => {
-      setWaConnecting(false);
+    const supabase = createClient();
+
+    // Mock: update status to connected for testing
+    // TODO: Real Meta Cloud API OAuth integration not built yet
+    const { error } = await supabase
+      .from("whatsapp_connections")
+      .upsert({
+        tenant_id: tenant.id,
+        status: "connected",
+        connected_at: new Date().toISOString(),
+      }, { onConflict: "tenant_id" });
+
+    if (!error) {
       setWaConnected(true);
-    }, 2000);
+      // Re-fetch to get the phone number if it was set
+      const { data } = await supabase
+        .from("whatsapp_connections")
+        .select("phone_number")
+        .single();
+      if (data?.phone_number) {
+        setWaNumber(data.phone_number);
+      }
+    }
+
+    setWaConnecting(false);
   };
 
-  const handleDisconnect = () => {
+  const handleDisconnect = async () => {
+    const supabase = createClient();
+    await supabase
+      .from("whatsapp_connections")
+      .update({ status: "disconnected" })
+      .eq("tenant_id", tenant.id);
     setWaConnected(false);
   };
 
-  const handleSaveEmail = () => {
-    setEmailSaved(true);
-    setTimeout(() => setEmailSaved(false), 2000);
+  const handleSaveEmail = async () => {
+    const supabase = createClient();
+    const { error } = await supabase.auth.updateUser({ email });
+    if (!error) {
+      setEmailSaved(true);
+      setTimeout(() => setEmailSaved(false), 2000);
+    }
   };
 
-  const handleChangePassword = () => {
+  const handleChangePassword = async () => {
     if (!currentPassword || !newPassword || newPassword !== confirmPassword) return;
-    setPwSaved(true);
-    setCurrentPassword("");
-    setNewPassword("");
-    setConfirmPassword("");
-    setTimeout(() => setPwSaved(false), 2000);
+
+    const supabase = createClient();
+    setPwError(null);
+
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+
+    if (error) {
+      setPwError(error.message);
+    } else {
+      setPwSaved(true);
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      setTimeout(() => setPwSaved(false), 2000);
+    }
   };
 
   const handlePlanChange = () => {
@@ -165,7 +248,9 @@ export default function AccountPage() {
   };
 
   const currentPlanData = plans.find((p) => p.name === currentPlan);
-  const nextBillingDate = "Aug 1, 2026";
+  const nextBillingDate = currentPeriodEnd
+    ? new Date(currentPeriodEnd).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+    : "N/A";
 
   return (
     <div className="space-y-6 max-w-4xl">
@@ -191,7 +276,11 @@ export default function AccountPage() {
 
         <Card>
           <CardContent className="p-5">
-            {waConnected ? (
+            {loading ? (
+              <div className="flex items-center justify-center py-6">
+                <RefreshCw className="h-5 w-5 text-[var(--ash)] animate-spin" />
+              </div>
+            ) : waConnected ? (
               <div className="flex items-start justify-between">
                 <div className="flex items-start gap-4">
                   <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-[var(--mist)] text-[var(--cedar)]">
@@ -208,10 +297,10 @@ export default function AccountPage() {
                       </span>
                     </div>
                     <p className="text-sm text-[var(--ink)] mt-1 font-[family-name:var(--font-jetbrains-mono)]">
-                      {waNumber}
+                      {waNumber || "No phone number configured"}
                     </p>
                     <p className="text-[10px] text-[var(--ash)] mt-1">
-                      Connected via Meta Cloud API · Last synced 2 min ago
+                      Connected via Meta Cloud API
                     </p>
                   </div>
                 </div>
@@ -273,7 +362,7 @@ export default function AccountPage() {
                   )}
                 </Button>
                 <p className="text-[10px] text-[var(--ash)] mt-3">
-                  You'll be redirected to Meta to authorise the connection.
+                  You&apos;ll be redirected to Meta to authorise the connection.
                   <br />
                   Requires a Meta Business account with WhatsApp Business API
                   access.
@@ -298,49 +387,67 @@ export default function AccountPage() {
         {/* Current plan card */}
         <Card className="mb-4">
           <CardContent className="p-5">
-            <div className="flex items-start justify-between">
-              <div>
-                <div className="flex items-center gap-2">
-                  <p className="text-sm font-semibold text-[var(--ink)] font-[family-name:var(--font-dm-sans)]">
-                    Current plan
-                  </p>
-                  <Badge variant="outline" className="text-[10px]">
-                    {currentPlan}
-                  </Badge>
-                </div>
-                <div className="flex items-baseline gap-1 mt-2">
-                  <span className="text-3xl font-bold text-[var(--ink)] font-[family-name:var(--font-dm-sans)]">
-                    ${currentPlanData?.price}
-                  </span>
-                  <span className="text-sm text-[var(--ash)]">/month</span>
-                </div>
-                <p className="text-xs text-[var(--ash)] mt-1">
-                  Next billing date: {nextBillingDate}
-                </p>
-                <div className="flex flex-wrap gap-x-4 gap-y-1 mt-3">
-                  {currentPlanData?.features.map((f) => (
-                    <span
-                      key={f}
-                      className="flex items-center gap-1 text-[11px] text-[var(--ink)]"
-                    >
-                      <Check className="h-3 w-3 text-[var(--cedar)]" />
-                      {f}
-                    </span>
-                  ))}
-                </div>
+            {loading ? (
+              <div className="flex items-center justify-center py-6">
+                <RefreshCw className="h-5 w-5 text-[var(--ash)] animate-spin" />
               </div>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  setSelectedPlan(currentPlan);
-                  setPlanDialogOpen(true);
-                }}
-                className="gap-1.5"
-              >
-                Change plan
-              </Button>
-            </div>
+            ) : (
+              <div className="flex items-start justify-between">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-semibold text-[var(--ink)] font-[family-name:var(--font-dm-sans)]">
+                      Current plan
+                    </p>
+                    <Badge variant="outline" className="text-[10px]">
+                      {currentPlan === "free" ? "Free" : currentPlan}
+                    </Badge>
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        "text-[10px]",
+                        subscriptionStatus === "active" && "border-[var(--cedar)] bg-[var(--mist)] text-[var(--cedar)]",
+                        subscriptionStatus === "cancelled" && "border-[var(--ember)] bg-[var(--ember)]/10 text-[var(--ember)]",
+                      )}
+                    >
+                      {subscriptionStatus}
+                    </Badge>
+                  </div>
+                  <div className="flex items-baseline gap-1 mt-2">
+                    <span className="text-3xl font-bold text-[var(--ink)] font-[family-name:var(--font-dm-sans)]">
+                      ${currentPlanData?.price || 0}
+                    </span>
+                    <span className="text-sm text-[var(--ash)]">/month</span>
+                  </div>
+                  <p className="text-xs text-[var(--ash)] mt-1">
+                    Next billing date: {nextBillingDate}
+                  </p>
+                  {currentPlanData && (
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 mt-3">
+                      {currentPlanData.features.map((f) => (
+                        <span
+                          key={f}
+                          className="flex items-center gap-1 text-[11px] text-[var(--ink)]"
+                        >
+                          <Check className="h-3 w-3 text-[var(--cedar)]" />
+                          {f}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setSelectedPlan(currentPlan);
+                    setPlanDialogOpen(true);
+                  }}
+                  className="gap-1.5"
+                >
+                  Change plan
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -533,9 +640,15 @@ export default function AccountPage() {
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="Repeat new password"
                 />
+                {pwError && (
+                  <p className="text-[10px] text-[var(--ember)]">
+                    {pwError}
+                  </p>
+                )}
                 {newPassword &&
                   confirmPassword &&
-                  newPassword !== confirmPassword && (
+                  newPassword !== confirmPassword &&
+                  !pwError && (
                     <p className="text-[10px] text-[var(--ember)]">
                       Passwords do not match.
                     </p>
@@ -763,6 +876,9 @@ export default function AccountPage() {
               variant="destructive"
               disabled={deleteConfirmText !== tenant.handle}
               onClick={() => {
+                console.warn(
+                  `[account] Delete business "${tenant.name}" requested — NOT IMPLEMENTED. Needs careful cascading delete logic.`,
+                );
                 setDeleteBusinessOpen(false);
                 setDeleteConfirmText("");
               }}
@@ -819,6 +935,9 @@ export default function AccountPage() {
               variant="destructive"
               disabled={deleteConfirmText !== "delete my account"}
               onClick={() => {
+                console.warn(
+                  "[account] Delete account requested — NOT IMPLEMENTED. Needs careful cascading delete logic.",
+                );
                 setDeleteAccountOpen(false);
                 setDeleteConfirmText("");
               }}
