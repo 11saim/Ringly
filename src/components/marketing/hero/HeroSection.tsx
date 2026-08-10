@@ -17,9 +17,9 @@ export function HeroSection() {
       <BackgroundEffects />
 
       <div className="relative w-full mx-auto max-w-7xl px-4 sm:px-6 pt-24 lg:pt-28 pb-12 sm:pb-14 lg:pb-20">
-        <div className="flex flex-col hero-row justify-between gap-8 items-center min-h-auto">
+        <div className="flex flex-col lg:flex-row hero-row justify-between gap-8 items-center min-h-auto">
           {/* Left */}
-          <div className="flex flex-col gap-6 sm:gap-8 self-start hero-center w-full max-w-2xl">
+          <div className="flex flex-col gap-6 sm:gap-8 self-start lg:self-center hero-center w-full max-w-2xl">
             {/* Headline */}
             <h1
               id="hero-heading"
