@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Bot,
   Globe,
@@ -8,7 +8,6 @@ import {
   RefreshCw,
   Smile,
   Tags,
-  Upload,
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -94,8 +93,6 @@ export function PersonaTab() {
 
   // Agent identity
   const [agentName, setAgentName] = useState("");
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
-  const avatarInputRef = useRef<HTMLInputElement>(null);
 
   // Tone
   const [tone, setTone] = useState<string>("friendly");
@@ -132,14 +129,13 @@ export function PersonaTab() {
     const { data: persona } = await supabase
       .from("agent_persona")
       .select(
-        "display_name, avatar_url, tone, greeting_message, signoff_message, use_emoji, response_length, fallback_message, banned_terms",
+        "display_name, tone, greeting_message, signoff_message, use_emoji, response_length, fallback_message, banned_terms",
       )
       .eq("tenant_id", user.id)
       .single();
 
     if (persona) {
       setAgentName(persona.display_name || "");
-      setAvatarPreview(persona.avatar_url || null);
       setTone(persona.tone || "friendly");
       setGreeting(persona.greeting_message || "");
       setSignoff(persona.signoff_message || "");
@@ -156,14 +152,6 @@ export function PersonaTab() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void fetchData();
   }, [fetchData]);
-
-  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => setAvatarPreview(reader.result as string);
-    reader.readAsDataURL(file);
-  };
 
   const addTerm = () => {
     const term = termInput.trim().toLowerCase();
@@ -196,7 +184,6 @@ export function PersonaTab() {
       {
         tenant_id: user.id,
         display_name: agentName,
-        avatar_url: avatarPreview,
         tone: tone as "formal" | "friendly" | "casual" | "playful",
         greeting_message: greeting || null,
         signoff_message: signoff || null,
@@ -231,64 +218,17 @@ export function PersonaTab() {
         />
         <Card>
           <CardContent className="p-5">
-            <div className="flex flex-col sm:flex-row items-start gap-6">
-              {/* Avatar */}
-              <div className="space-y-2">
-                <Label>Avatar</Label>
-                <div
-                  className="relative flex h-20 w-20 items-center justify-center rounded-lg border-2 border-dashed border-[var(--slate)] bg-[var(--linen)] overflow-hidden cursor-pointer transition-colors hover:border-[var(--cedar)]"
-                  onClick={() => avatarInputRef.current?.click()}
-                >
-                  {avatarPreview ? (
-                    <>
-                      <img
-                        src={avatarPreview}
-                        alt="Agent avatar preview"
-                        className="h-full w-full object-cover"
-                      />
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setAvatarPreview(null);
-                          if (avatarInputRef.current)
-                            avatarInputRef.current.value = "";
-                        }}
-                        className="absolute top-1 right-1 h-5 w-5 rounded-full bg-[var(--ink)]/70 text-white flex items-center justify-center"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </>
-                  ) : (
-                    <div className="text-center">
-                      <Upload className="h-5 w-5 text-[var(--ash)] mx-auto" />
-                      <p className="text-[10px] text-[var(--ash)] mt-1">
-                        Upload
-                      </p>
-                    </div>
-                  )}
-                </div>
-                <input
-                  ref={avatarInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleAvatarChange}
-                />
-              </div>
-
-              {/* Name */}
-              <div className="flex-1 space-y-1.5">
-                <Label htmlFor="agent-name">Display name</Label>
-                <Input
-                  id="agent-name"
-                  value={agentName}
-                  onChange={(e) => setAgentName(e.target.value)}
-                  placeholder="e.g. Bloom Assistant"
-                />
-                <p className="text-[10px] text-[var(--ash)]">
-                  This name appears when the agent sends messages.
-                </p>
-              </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="agent-name">Display name</Label>
+              <Input
+                id="agent-name"
+                value={agentName}
+                onChange={(e) => setAgentName(e.target.value)}
+                placeholder="e.g. Bloom Assistant"
+              />
+              <p className="text-[10px] text-[var(--ash)]">
+                This name appears when the agent sends messages.
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -370,15 +310,7 @@ export function PersonaTab() {
               </p>
               <div className="flex items-start gap-3">
                 <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--cedar)] text-white text-xs font-semibold">
-                  {avatarPreview ? (
-                    <img
-                      src={avatarPreview}
-                      alt=""
-                      className="h-full w-full rounded-full object-cover"
-                    />
-                  ) : (
-                    agentName.charAt(0)
-                  )}
+                  {agentName.charAt(0)}
                 </div>
                 <div className="bg-white rounded-lg px-3 py-2 border border-[var(--slate)] shadow-xs max-w-sm">
                   <p className="text-[10px] font-medium text-[var(--cedar)] mb-0.5">

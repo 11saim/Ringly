@@ -2,9 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  AlertCircle,
   FileText,
   HelpCircle,
   Inbox,
+  Loader2,
   Plus,
   RefreshCw,
   Trash2,
@@ -31,7 +33,25 @@ interface Document {
   name: string;
   source_type: "upload" | "paste";
   status: "processed" | "pending" | "failed";
+  file_url?: string | null;
+  signedUrl?: string | null;
 }
+
+interface UploadingFile {
+  id: string;
+  name: string;
+  progress: number;
+  error: string | null;
+}
+
+const ALLOWED_TYPES = [
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+];
+const ALLOWED_EXTENSIONS = [".pdf", ".doc", ".docx"];
+const MAX_SIZE_MB = 10;
+const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024;
 
 const statusConfig: Record<string, { label: string; className: string }> = {
   processed: {
@@ -77,11 +97,20 @@ function SectionHeading({
   );
 }
 
+function validateFile(file: File): string | null {
+  const ext = "." + file.name.split(".").pop()?.toLowerCase();
+  if (!ALLOWED_TYPES.includes(file.type) && !ALLOWED_EXTENSIONS.includes(ext)) {
+    return `"${file.name}" is not a supported file type. Please upload PDF, DOC, or DOCX.`;
+  }
+  if (file.size > MAX_SIZE_BYTES) {
+    return `"${file.name}" exceeds the ${MAX_SIZE_MB} MB size limit.`;
+  }
+  return null;
+}
+
 export function KnowledgeBaseTab() {
-  // Loading state
   const [loading, setLoading] = useState(true);
 
-  // FAQs
   const [faqs, setFaqs] = useState<Faq[]>([]);
   const [newQuestion, setNewQuestion] = useState("");
   const [newAnswer, setNewAnswer] = useState("");
@@ -89,17 +118,17 @@ export function KnowledgeBaseTab() {
   const [editQuestion, setEditQuestion] = useState("");
   const [editAnswer, setEditAnswer] = useState("");
 
-  // Documents
   const [documents, setDocuments] = useState<Document[]>([]);
   const [pasteText, setPasteText] = useState("");
   const [pasteTitle, setPasteTitle] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
 
-  // Save state
+  const [uploadingFiles, setUploadingFiles] = useState<UploadingFile[]>([]);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
   const [saving, setSaving] = useState(false);
 
-  // Fetch data from Supabase
   const fetchData = useCallback(async () => {
     const supabase = createClient();
     const {
@@ -110,7 +139,6 @@ export function KnowledgeBaseTab() {
       return;
     }
 
-    // 1. Fetch FAQs
     const { data: faqRows } = await supabase
       .from("kb_faqs")
       .select("id, question, answer")
@@ -118,22 +146,34 @@ export function KnowledgeBaseTab() {
 
     if (faqRows) setFaqs(faqRows);
 
-    // 2. Fetch documents
     const { data: docRows } = await supabase
       .from("kb_documents")
-      .select("id, source_type, status, name, created_at")
+      .select("id, source_type, status, name, created_at, file_url")
       .eq("tenant_id", user.id)
       .order("created_at", { ascending: false });
 
     if (docRows) {
-      setDocuments(
-        docRows.map((d) => ({
-          id: d.id,
-          name: d.name || (d.source_type === "paste" ? "Pasted text" : "Untitled"),
-          source_type: d.source_type as "upload" | "paste",
-          status: d.status as "processed" | "pending" | "failed",
-        })),
+      const docs: Document[] = docRows.map((d) => ({
+        id: d.id,
+        name: d.name || (d.source_type === "paste" ? "Pasted text" : "Untitled"),
+        source_type: d.source_type as "upload" | "paste",
+        status: d.status as "processed" | "pending" | "failed",
+        file_url: d.file_url,
+      }));
+
+      const docsWithUrls = await Promise.all(
+        docs.map(async (doc) => {
+          if (doc.source_type === "upload" && doc.file_url) {
+            const { data } = await supabase.storage
+              .from("kb-documents")
+              .createSignedUrl(doc.file_url, 3600);
+            return { ...doc, signedUrl: data?.signedUrl ?? null };
+          }
+          return doc;
+        }),
       );
+
+      setDocuments(docsWithUrls);
     }
 
     setLoading(false);
@@ -218,35 +258,91 @@ export function KnowledgeBaseTab() {
     } = await supabase.auth.getUser();
     if (!user) return;
 
-    for (const file of Array.from(files)) {
-      // Insert document row — file upload not built yet, so status = failed
-      console.warn(
-        `[KB] File upload not yet implemented for "${file.name}" — add real storage later`,
+    setUploadError(null);
+    const fileList = Array.from(files);
+
+    const validationErrors: string[] = [];
+    const validFiles: File[] = [];
+
+    for (const file of fileList) {
+      const error = validateFile(file);
+      if (error) {
+        validationErrors.push(error);
+      } else {
+        validFiles.push(file);
+      }
+    }
+
+    if (validationErrors.length > 0) {
+      setUploadError(validationErrors.join(" "));
+    }
+
+    for (const file of validFiles) {
+      const uploadId = crypto.randomUUID();
+      const ext = file.name.split(".").pop()?.toLowerCase() || "bin";
+      const storagePath = `${user.id}/${crypto.randomUUID()}.${ext}`;
+
+      setUploadingFiles((prev) => [
+        ...prev,
+        { id: uploadId, name: file.name, progress: 0, error: null },
+      ]);
+
+      const { error: uploadErr } = await supabase.storage
+        .from("kb-documents")
+        .upload(storagePath, file, {
+          contentType: file.type || "application/octet-stream",
+          upsert: false,
+        });
+
+      if (uploadErr) {
+        setUploadingFiles((prev) =>
+          prev.map((f) =>
+            f.id === uploadId
+              ? { ...f, error: uploadErr.message || "Upload failed", progress: -1 }
+              : f,
+          ),
+        );
+        continue;
+      }
+
+      setUploadingFiles((prev) =>
+        prev.map((f) => (f.id === uploadId ? { ...f, progress: 100 } : f)),
       );
+
       const { data: newDoc } = await supabase
         .from("kb_documents")
         .insert({
           tenant_id: user.id,
           source_type: "upload",
-          file_url: null,
+          file_url: storagePath,
           name: file.name,
-          status: "failed",
+          status: "pending",
         })
         .select()
         .single();
 
       if (newDoc) {
+        const { data: urlData } = await supabase.storage
+          .from("kb-documents")
+          .createSignedUrl(storagePath, 3600);
+
         setDocuments((prev) => [
           ...prev,
           {
             id: newDoc.id,
             name: newDoc.name || file.name,
             source_type: "upload",
-            status: "failed",
+            status: "pending",
+            file_url: storagePath,
+            signedUrl: urlData?.signedUrl ?? null,
           },
         ]);
       }
+
+      setUploadingFiles((prev) => prev.filter((f) => f.id !== uploadId));
     }
+
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -290,16 +386,19 @@ export function KnowledgeBaseTab() {
     setPasteTitle("");
   };
 
-  const deleteDoc = async (id: string) => {
+  const deleteDoc = async (doc: Document) => {
     const supabase = createClient();
-    await supabase.from("kb_documents").delete().eq("id", id);
-    setDocuments((prev) => prev.filter((d) => d.id !== id));
+
+    if (doc.source_type === "upload" && doc.file_url) {
+      await supabase.storage.from("kb-documents").remove([doc.file_url]);
+    }
+
+    await supabase.from("kb_documents").delete().eq("id", doc.id);
+    setDocuments((prev) => prev.filter((d) => d.id !== doc.id));
   };
 
   const handleSave = async () => {
     setSaving(true);
-    // Documents and FAQs are saved inline (on add/edit/delete).
-    // This handler is for any pending state if needed.
     setTimeout(() => setSaving(false), 500);
   };
 
@@ -310,6 +409,8 @@ export function KnowledgeBaseTab() {
       </div>
     );
   }
+
+  const isUploading = uploadingFiles.length > 0;
 
   return (
     <div className="space-y-8 pb-24">
@@ -323,11 +424,9 @@ export function KnowledgeBaseTab() {
         />
         <Card>
           <CardContent className="p-5 space-y-0">
-            {/* Existing FAQs */}
             {faqs.map((faq, i) => (
               <div key={faq.id}>
                 {editingId === faq.id ? (
-                  /* Edit mode */
                   <div className="py-3 space-y-2">
                     <Input
                       value={editQuestion}
@@ -361,7 +460,6 @@ export function KnowledgeBaseTab() {
                     </div>
                   </div>
                 ) : (
-                  /* View mode */
                   <div className="flex items-start gap-3 py-3 group">
                     <div
                       className="flex-1 min-w-0 cursor-pointer"
@@ -386,7 +484,6 @@ export function KnowledgeBaseTab() {
               </div>
             ))}
 
-            {/* Add new FAQ */}
             <Separator className="mt-2" />
             <div className="pt-3 space-y-2">
               <p className="text-xs font-medium text-[var(--ash)] uppercase tracking-wider mb-2">
@@ -442,19 +539,23 @@ export function KnowledgeBaseTab() {
               }}
               onDragLeave={() => setDragOver(false)}
               onDrop={handleDrop}
-              onClick={() => fileInputRef.current?.click()}
+              onClick={() => !isUploading && fileInputRef.current?.click()}
             >
-              <Upload
-                className={cn(
-                  "h-6 w-6 mb-2",
-                  dragOver ? "text-[var(--cedar)]" : "text-[var(--ash)]",
-                )}
-              />
+              {isUploading ? (
+                <Loader2 className="h-6 w-6 mb-2 text-[var(--cedar)] animate-spin" />
+              ) : (
+                <Upload
+                  className={cn(
+                    "h-6 w-6 mb-2",
+                    dragOver ? "text-[var(--cedar)]" : "text-[var(--ash)]",
+                  )}
+                />
+              )}
               <p className="text-sm text-[var(--ink)] font-medium">
-                Drop files here or click to upload
+                {isUploading ? "Uploading files..." : "Drop files here or click to upload"}
               </p>
               <p className="text-xs text-[var(--ash)] mt-1">
-                PDF, DOC, DOCX — up to 10 MB each
+                PDF, DOC, DOCX — up to {MAX_SIZE_MB} MB each
               </p>
               <input
                 ref={fileInputRef}
@@ -465,6 +566,43 @@ export function KnowledgeBaseTab() {
                 onChange={(e) => void addFiles(e.target.files)}
               />
             </div>
+
+            {/* Upload error */}
+            {uploadError && (
+              <div className="flex items-start gap-2 rounded-md border border-[var(--ember)]/30 bg-[var(--ember)]/5 px-3 py-2.5">
+                <AlertCircle className="h-4 w-4 text-[var(--ember)] shrink-0 mt-0.5" />
+                <p className="text-xs text-[var(--ember)]">{uploadError}</p>
+              </div>
+            )}
+
+            {/* In-progress uploads */}
+            {uploadingFiles.length > 0 && (
+              <div className="space-y-2">
+                {uploadingFiles.map((f) => (
+                  <div
+                    key={f.id}
+                    className="flex items-center gap-3 rounded-md border border-[var(--cedar)]/20 bg-[var(--mist)]/30 px-3 py-2.5"
+                  >
+                    <Loader2 className="h-4 w-4 text-[var(--cedar)] animate-spin shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-[var(--ink)] truncate">
+                        {f.name}
+                      </p>
+                      {f.error ? (
+                        <p className="text-[10px] text-[var(--ember)]">{f.error}</p>
+                      ) : (
+                        <div className="mt-1.5 h-1 w-full rounded-full bg-[var(--slate)] overflow-hidden">
+                          <div
+                            className="h-full rounded-full bg-[var(--cedar)] transition-all duration-300"
+                            style={{ width: f.progress >= 0 ? `${f.progress}%` : "100%" }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
 
             {/* Paste text */}
             <div className="space-y-2">
@@ -519,9 +657,20 @@ export function KnowledgeBaseTab() {
                               )}
                             </div>
                             <div className="min-w-0">
-                              <p className="text-sm font-medium text-[var(--ink)] truncate">
-                                {doc.name}
-                              </p>
+                              {doc.source_type === "upload" && doc.signedUrl ? (
+                                <a
+                                  href={doc.signedUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-sm font-medium text-[var(--ink)] truncate hover:text-[var(--cedar)] transition-colors block"
+                                >
+                                  {doc.name}
+                                </a>
+                              ) : (
+                                <p className="text-sm font-medium text-[var(--ink)] truncate">
+                                  {doc.name}
+                                </p>
+                              )}
                               <p className="text-[10px] text-[var(--ash)]">
                                 {doc.source_type === "upload"
                                   ? "File upload"
@@ -540,7 +689,7 @@ export function KnowledgeBaseTab() {
                               {status.label}
                             </Badge>
                             <button
-                              onClick={() => void deleteDoc(doc.id)}
+                              onClick={() => void deleteDoc(doc)}
                               className="p-1 rounded hover:bg-hover-bg transition-colors"
                             >
                               <Trash2 className="h-3.5 w-3.5 text-[var(--ash)]" />

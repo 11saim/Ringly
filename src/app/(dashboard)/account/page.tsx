@@ -16,7 +16,6 @@ import {
   Trash2,
   Unplug,
   AlertCircle,
-  XCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -132,9 +131,10 @@ export default function AccountPage() {
   const [pwError, setPwError] = useState<string | null>(null);
 
   // ── Danger zone state ──
-  const [deleteBusinessOpen, setDeleteBusinessOpen] = useState(false);
   const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     const supabase = createClient();
@@ -698,59 +698,31 @@ export default function AccountPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Delete business */}
-            <div className="rounded-md border border-[var(--ember)]/20 bg-white p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Trash2 className="h-4 w-4 text-[var(--ember)]" />
-                <h4 className="text-sm font-semibold text-[var(--ink)]">
-                  Delete business
-                </h4>
-              </div>
-              <p className="text-xs text-[var(--ash)] mb-3 leading-relaxed">
-                Permanently delete <strong>{tenant.name}</strong> and all
-                associated data including contacts, conversations, bookings,
-                and settings. This cannot be undone.
-              </p>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  setDeleteConfirmText("");
-                  setDeleteBusinessOpen(true);
-                }}
-                className="gap-1.5 text-[var(--ember)] border-[var(--ember)]/30 hover:bg-[var(--ember)]/5"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-                Delete business
-              </Button>
-            </div>
-
-            {/* Delete account */}
-            <div className="rounded-md border border-[var(--ember)]/20 bg-white p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <XCircle className="h-4 w-4 text-[var(--ember)]" />
-                <h4 className="text-sm font-semibold text-[var(--ink)]">
-                  Delete account
-                </h4>
-              </div>
-              <p className="text-xs text-[var(--ash)] mb-3 leading-relaxed">
-                Permanently delete your user account and all access. Any
-                businesses you own will also be deleted. This cannot be undone.
-              </p>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  setDeleteConfirmText("");
-                  setDeleteAccountOpen(true);
-                }}
-                className="gap-1.5 text-[var(--ember)] border-[var(--ember)]/30 hover:bg-[var(--ember)]/5"
-              >
-                <XCircle className="h-3.5 w-3.5" />
+          <div className="rounded-md border border-[var(--ember)]/20 bg-white p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Trash2 className="h-4 w-4 text-[var(--ember)]" />
+              <h4 className="text-sm font-semibold text-[var(--ink)]">
                 Delete account
-              </Button>
+              </h4>
             </div>
+            <p className="text-xs text-[var(--ash)] mb-3 leading-relaxed">
+              Permanently delete your account and all associated data including
+              contacts, conversations, bookings, and settings. This cannot be
+              undone.
+            </p>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                setDeleteConfirmText("");
+                setDeleteError(null);
+                setDeleteAccountOpen(true);
+              }}
+              className="gap-1.5 text-[var(--ember)] border-[var(--ember)]/30 hover:bg-[var(--ember)]/5"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              Delete account
+            </Button>
           </div>
         </div>
       </section>
@@ -831,65 +803,6 @@ export default function AccountPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete business dialog */}
-      <Dialog open={deleteBusinessOpen} onOpenChange={setDeleteBusinessOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-[var(--ember)]">
-              Delete {tenant.name}?
-            </DialogTitle>
-            <DialogDescription>
-              This will permanently delete this business and all its data
-              including contacts, conversations, bookings, broadcasts, and
-              settings.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3">
-            <div className="rounded-md bg-[var(--ember)]/5 border border-[var(--ember)]/20 p-3">
-              <div className="flex items-start gap-2">
-                <AlertCircle className="h-4 w-4 text-[var(--ember)] shrink-0 mt-0.5" />
-                <p className="text-xs text-[var(--ink)] leading-relaxed">
-                  This action is <strong>irreversible</strong>. All data will be
-                  permanently removed from our servers.
-                </p>
-              </div>
-            </div>
-            <div className="space-y-1.5">
-              <Label>
-                Type <strong>{tenant.handle}</strong> to confirm:
-              </Label>
-              <Input
-                value={deleteConfirmText}
-                onChange={(e) => setDeleteConfirmText(e.target.value)}
-                placeholder={tenant.handle}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="ghost"
-              onClick={() => setDeleteBusinessOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              disabled={deleteConfirmText !== tenant.handle}
-              onClick={() => {
-                console.warn(
-                  `[account] Delete business "${tenant.name}" requested — NOT IMPLEMENTED. Needs careful cascading delete logic.`,
-                );
-                setDeleteBusinessOpen(false);
-                setDeleteConfirmText("");
-              }}
-            >
-              <Trash2 className="h-3.5 w-3.5 mr-1.5" />
-              Delete business permanently
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
       {/* Delete account dialog */}
       <Dialog open={deleteAccountOpen} onOpenChange={setDeleteAccountOpen}>
         <DialogContent className="max-w-md">
@@ -898,8 +811,8 @@ export default function AccountPage() {
               Delete your account?
             </DialogTitle>
             <DialogDescription>
-              This will permanently delete your account and revoke all access.
-              Any businesses you own will also be deleted.
+              This will permanently delete your account, all associated data,
+              and revoke access. This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
@@ -907,42 +820,79 @@ export default function AccountPage() {
               <div className="flex items-start gap-2">
                 <AlertCircle className="h-4 w-4 text-[var(--ember)] shrink-0 mt-0.5" />
                 <p className="text-xs text-[var(--ink)] leading-relaxed">
-                  This action is <strong>irreversible</strong>. You will lose
-                  access to all businesses and data associated with this
-                  account.
+                  All contacts, conversations, bookings, settings, and any
+                  other data tied to this account will be{" "}
+                  <strong>permanently removed</strong>.
                 </p>
               </div>
             </div>
             <div className="space-y-1.5">
               <Label>
-                Type <strong>delete my account</strong> to confirm:
+                Type <strong>DELETE</strong> to confirm:
               </Label>
               <Input
                 value={deleteConfirmText}
-                onChange={(e) => setDeleteConfirmText(e.target.value)}
-                placeholder="delete my account"
+                onChange={(e) => {
+                  setDeleteConfirmText(e.target.value);
+                  setDeleteError(null);
+                }}
+                placeholder="DELETE"
+                autoFocus
               />
             </div>
+            {deleteError && (
+              <div className="rounded-md bg-[var(--ember)]/5 border border-[var(--ember)]/20 p-2.5">
+                <p className="text-xs text-[var(--ember)]">{deleteError}</p>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button
               variant="ghost"
               onClick={() => setDeleteAccountOpen(false)}
+              disabled={deleteLoading}
             >
               Cancel
             </Button>
             <Button
               variant="destructive"
-              disabled={deleteConfirmText !== "delete my account"}
-              onClick={() => {
-                console.warn(
-                  "[account] Delete account requested — NOT IMPLEMENTED. Needs careful cascading delete logic.",
-                );
-                setDeleteAccountOpen(false);
-                setDeleteConfirmText("");
+              disabled={deleteConfirmText !== "DELETE" || deleteLoading}
+              onClick={async () => {
+                setDeleteLoading(true);
+                setDeleteError(null);
+
+                try {
+                  const res = await fetch("/api/account/delete", {
+                    method: "DELETE",
+                  });
+
+                  const body = await res.json().catch(() => null);
+
+                  if (!res.ok) {
+                    setDeleteError(
+                      body?.error ?? "Deletion failed. Please try again.",
+                    );
+                    setDeleteLoading(false);
+                    return;
+                  }
+
+                  // Success — sign out and redirect to landing page.
+                  const supabase = createClient();
+                  await supabase.auth.signOut();
+                  window.location.href = "/";
+                } catch {
+                  setDeleteError(
+                    "Something went wrong. Please try again.",
+                  );
+                  setDeleteLoading(false);
+                }
               }}
             >
-              <XCircle className="h-3.5 w-3.5 mr-1.5" />
+              {deleteLoading ? (
+                <span className="h-3.5 w-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin mr-1.5" />
+              ) : (
+                <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+              )}
               Delete account permanently
             </Button>
           </DialogFooter>

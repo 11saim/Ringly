@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Building2,
   Clock,
@@ -9,8 +9,7 @@ import {
   Plus,
   RefreshCw,
   Trash2,
-  Upload,
-  X,
+
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -28,7 +27,6 @@ import {
 } from "@/components/ui/select";
 import { useTenant } from "@/lib/tenant-context";
 import { createClient } from "@/lib/supabase/client";
-import { cn } from "@/lib/utils";
 
 const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
 
@@ -146,11 +144,7 @@ export function ProfileTab() {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
 
-  // Logo / Cover
-  const [logoPreview, setLogoPreview] = useState<string | null>(null);
-  const [coverPreview, setCoverPreview] = useState<string | null>(null);
-  const logoInputRef = useRef<HTMLInputElement>(null);
-  const coverInputRef = useRef<HTMLInputElement>(null);
+
 
   // Industry
   const [industry, setIndustry] = useState("");
@@ -199,7 +193,7 @@ export function ProfileTab() {
     const { data: tenantData } = await supabase
       .from("tenants")
       .select(
-        "business_name, description, industry, timezone, currency, support_email, support_phone, website_url, address, social_links, logo_url, cover_url",
+        "business_name, description, industry, timezone, currency, support_email, support_phone, website_url, address, social_links",
       )
       .eq("id", user.id)
       .single();
@@ -214,8 +208,6 @@ export function ProfileTab() {
       setSupportEmail(tenantData.support_email || "");
       setAddress(tenantData.address || "");
       setWebsite(tenantData.website_url || "");
-      setLogoPreview(tenantData.logo_url || null);
-      setCoverPreview(tenantData.cover_url || null);
 
       const links = (tenantData.social_links as Record<string, string>) || {};
       setInstagram(links.instagram || "");
@@ -265,17 +257,6 @@ export function ProfileTab() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void fetchData();
   }, [fetchData]);
-
-  const handleFileChange = (
-    e: React.ChangeEvent<HTMLInputElement>,
-    setter: (v: string | null) => void,
-  ) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => setter(reader.result as string);
-    reader.readAsDataURL(file);
-  };
 
   const updateDay = (
     day: string,
@@ -327,8 +308,6 @@ export function ProfileTab() {
         website_url: website || null,
         address: address || null,
         social_links: { instagram, facebook, website },
-        logo_url: logoPreview,
-        cover_url: coverPreview,
       })
       .eq("id", user.id);
     if (tenantErr) console.error("Failed to update tenant:", tenantErr);
@@ -425,112 +404,6 @@ export function ProfileTab() {
               <p className="text-[10px] text-[var(--ash)]">
                 {description.length}/200 characters
               </p>
-            </div>
-          </CardContent>
-        </Card>
-      </section>
-
-      {/* ── Logo & Cover ── */}
-      <section>
-        <SectionHeading
-          icon={Upload}
-          title="Logo & Cover Photo"
-          description="Visual identity shown to customers."
-        />
-        <Card>
-          <CardContent className="p-5">
-            <div className="flex flex-col sm:flex-row gap-6">
-              {/* Logo */}
-              <div className="space-y-2">
-                <Label>Logo</Label>
-                <div
-                  className={cn(
-                    "relative flex h-24 w-24 items-center justify-center rounded-lg border-2 border-dashed border-[var(--slate)] bg-[var(--linen)] overflow-hidden cursor-pointer transition-colors hover:border-[var(--cedar)]",
-                  )}
-                  onClick={() => logoInputRef.current?.click()}
-                >
-                  {logoPreview ? (
-                    <>
-                      <img
-                        src={logoPreview}
-                        alt="Logo preview"
-                        className="h-full w-full object-cover"
-                      />
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setLogoPreview(null);
-                          if (logoInputRef.current)
-                            logoInputRef.current.value = "";
-                        }}
-                        className="absolute top-1 right-1 h-5 w-5 rounded-full bg-[var(--ink)]/70 text-white flex items-center justify-center"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </>
-                  ) : (
-                    <div className="text-center">
-                      <Upload className="h-5 w-5 text-[var(--ash)] mx-auto" />
-                      <p className="text-[10px] text-[var(--ash)] mt-1">
-                        Upload
-                      </p>
-                    </div>
-                  )}
-                </div>
-                <input
-                  ref={logoInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => handleFileChange(e, setLogoPreview)}
-                />
-              </div>
-
-              {/* Cover */}
-              <div className="space-y-2 flex-1">
-                <Label>Cover photo</Label>
-                <div
-                  className={cn(
-                    "relative flex h-24 w-full items-center justify-center rounded-lg border-2 border-dashed border-[var(--slate)] bg-[var(--linen)] overflow-hidden cursor-pointer transition-colors hover:border-[var(--cedar)]",
-                  )}
-                  onClick={() => coverInputRef.current?.click()}
-                >
-                  {coverPreview ? (
-                    <>
-                      <img
-                        src={coverPreview}
-                        alt="Cover preview"
-                        className="h-full w-full object-cover"
-                      />
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setCoverPreview(null);
-                          if (coverInputRef.current)
-                            coverInputRef.current.value = "";
-                        }}
-                        className="absolute top-1 right-1 h-5 w-5 rounded-full bg-[var(--ink)]/70 text-white flex items-center justify-center"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </>
-                  ) : (
-                    <div className="text-center">
-                      <Upload className="h-5 w-5 text-[var(--ash)] mx-auto" />
-                      <p className="text-[10px] text-[var(--ash)] mt-1">
-                        Click to upload cover photo
-                      </p>
-                    </div>
-                  )}
-                </div>
-                <input
-                  ref={coverInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => handleFileChange(e, setCoverPreview)}
-                />
-              </div>
             </div>
           </CardContent>
         </Card>
