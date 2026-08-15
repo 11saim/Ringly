@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -17,6 +17,8 @@ type LoginValues = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const successMessage = searchParams.get("message");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
@@ -96,6 +98,12 @@ export default function LoginPage() {
       {error && (
         <div className="mb-4 rounded-lg bg-[var(--ember)]/8 border border-[var(--ember)]/20 py-2.5 px-4 text-center text-xs font-medium text-[var(--ember)]">
           {error}
+        </div>
+      )}
+
+      {successMessage && (
+        <div className="mb-4 rounded-lg bg-[var(--cedar)]/8 border border-[var(--cedar)]/20 py-2.5 px-4 text-center text-xs font-medium text-[var(--cedar)]">
+          {successMessage}
         </div>
       )}
 
@@ -180,12 +188,12 @@ export default function LoginPage() {
         </div>
 
         <div className="text-right">
-          <button
-            type="button"
+          <Link
+            href="/forgot-password"
             className="text-xs font-medium text-[var(--cedar)] hover:text-[var(--forest)] transition-colors"
           >
             Forgot password?
-          </button>
+          </Link>
         </div>
 
         <button
