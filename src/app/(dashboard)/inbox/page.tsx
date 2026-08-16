@@ -365,17 +365,28 @@ export default function InboxPage() {
     if (!selected || !replyText.trim()) return;
     const text = replyText.trim();
 
-    const { error } = await supabase.from("messages").insert({
-      conversation_id: selected.id,
-      sender_type: "human_staff",
-      content: text,
-      is_internal_note: false,
+    const res = await fetch("/api/messages/send", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ conversationId: selected.id, text }),
     });
 
-    if (error) return;
+    const body = await res.json().catch(() => null);
+
+    if (!res.ok || !body?.ok) {
+      console.error(
+        "[Inbox] Send failed:",
+        body?.error ?? body?.warning ?? `HTTP ${res.status}`,
+      );
+      return;
+    }
+
+    if (body.warning) {
+      console.warn("[Inbox] Send partial:", body.warning);
+    }
 
     const newMsg: InboxMessage = {
-      id: `temp-${Date.now()}`,
+      id: body.messageId ?? `temp-${Date.now()}`,
       sender: "human",
       text,
       time: "Just now",
@@ -388,7 +399,7 @@ export default function InboxPage() {
       ),
     );
     setReplyText("");
-  }, [selected, replyText, supabase]);
+  }, [selected, replyText]);
 
   const handleAddNote = useCallback(async () => {
     if (!selected || !noteText.trim()) return;

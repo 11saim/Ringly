@@ -109,7 +109,13 @@ export default function AccountPage() {
   // ── WhatsApp state ──
   const [waConnected, setWaConnected] = useState(false);
   const [waNumber, setWaNumber] = useState<string>("");
-  const [waConnecting, setWaConnecting] = useState(false);
+  const [waTokenLast4, setWaTokenLast4] = useState<string>("");
+  const [waPhoneNumber, setWaPhoneNumber] = useState("");
+  const [waPhoneNumberId, setWaPhoneNumberId] = useState("");
+  const [waMetaAccountId, setWaMetaAccountId] = useState("");
+  const [waAccessToken, setWaAccessToken] = useState("");
+  const [waFormLoading, setWaFormLoading] = useState(false);
+  const [waFormError, setWaFormError] = useState<string | null>(null);
 
   // ── Subscription state ──
   const [currentPlan, setCurrentPlan] = useState<string>("free");
@@ -142,12 +148,15 @@ export default function AccountPage() {
     // Fetch WhatsApp connection
     const { data: waData } = await supabase
       .from("whatsapp_connections")
-      .select("status, phone_number")
+      .select("status, phone_number, access_token")
       .single();
 
     if (waData) {
       setWaConnected(waData.status === "connected");
       setWaNumber(waData.phone_number || "");
+      if (waData.access_token) {
+        setWaTokenLast4(waData.access_token.slice(-4));
+      }
     }
 
     // Fetch subscription
@@ -176,42 +185,51 @@ export default function AccountPage() {
     void fetchData();
   }, [fetchData]);
 
-  const handleReconnect = async () => {
-    setWaConnecting(true);
-    const supabase = createClient();
+  const handleConnect = async () => {
+    setWaFormError(null);
+    setWaFormLoading(true);
 
-    // Mock: update status to connected for testing
-    // TODO: Real Meta Cloud API OAuth integration not built yet
-    const { error } = await supabase
-      .from("whatsapp_connections")
-      .upsert({
-        tenant_id: tenant.id,
-        status: "connected",
-        connected_at: new Date().toISOString(),
-      }, { onConflict: "tenant_id" });
+    try {
+      const res = await fetch("/api/whatsapp/connect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          phone_number: waPhoneNumber,
+          phone_number_id: waPhoneNumberId,
+          meta_account_id: waMetaAccountId,
+          access_token: waAccessToken,
+        }),
+      });
 
-    if (!error) {
-      setWaConnected(true);
-      // Re-fetch to get the phone number if it was set
-      const { data } = await supabase
-        .from("whatsapp_connections")
-        .select("phone_number")
-        .single();
-      if (data?.phone_number) {
-        setWaNumber(data.phone_number);
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        setWaFormError(body?.error ?? "Connection failed. Please try again.");
+        return;
       }
-    }
 
-    setWaConnecting(false);
+      setWaConnected(true);
+      setWaNumber(waPhoneNumber);
+      setWaTokenLast4(waAccessToken.slice(-4));
+      setWaPhoneNumber("");
+      setWaPhoneNumberId("");
+      setWaMetaAccountId("");
+      setWaAccessToken("");
+    } catch {
+      setWaFormError("Something went wrong. Please try again.");
+    } finally {
+      setWaFormLoading(false);
+    }
   };
 
   const handleDisconnect = async () => {
-    const supabase = createClient();
-    await supabase
-      .from("whatsapp_connections")
-      .update({ status: "disconnected" })
-      .eq("tenant_id", tenant.id);
-    setWaConnected(false);
+    try {
+      await fetch("/api/whatsapp/disconnect", { method: "POST" });
+      setWaConnected(false);
+      setWaNumber("");
+      setWaTokenLast4("");
+    } catch {
+      // silent — UI stays as-is on failure
+    }
   };
 
   const handleSaveEmail = async () => {
@@ -299,75 +317,142 @@ export default function AccountPage() {
                     <p className="text-sm text-[var(--ink)] mt-1 font-[family-name:var(--font-jetbrains-mono)]">
                       {waNumber || "No phone number configured"}
                     </p>
+                    {waTokenLast4 && (
+                      <p className="text-[11px] text-[var(--ash)] mt-1 font-[family-name:var(--font-jetbrains-mono)]">
+                        Access token: &bull;&bull;&bull;&bull;{waTokenLast4}
+                      </p>
+                    )}
                     <p className="text-[10px] text-[var(--ash)] mt-1">
                       Connected via Meta Cloud API
                     </p>
                   </div>
                 </div>
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={handleReconnect}
-                    disabled={waConnecting}
-                    className="gap-1.5"
-                  >
-                    <RefreshCw
-                      className={cn(
-                        "h-3.5 w-3.5",
-                        waConnecting && "animate-spin",
-                      )}
-                    />
-                    Reconnect
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={handleDisconnect}
-                    className="gap-1.5 text-[var(--ember)] border-[var(--ember)]/30 hover:bg-[var(--ember)]/5"
-                  >
-                    <Unplug className="h-3.5 w-3.5" />
-                    Disconnect
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-6">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--linen)] mx-auto mb-3">
-                  <MessageSquare className="h-5 w-5 text-[var(--ash)]" />
-                </div>
-                <p className="text-sm font-medium text-[var(--ink)] mb-1">
-                  No WhatsApp number connected
-                </p>
-                <p className="text-xs text-[var(--ash)] mb-4 max-w-sm mx-auto">
-                  Connect your business phone number through Meta Cloud API to
-                  start receiving and sending messages.
-                </p>
                 <Button
                   size="sm"
-                  onClick={handleReconnect}
-                  disabled={waConnecting}
+                  variant="outline"
+                  onClick={handleDisconnect}
+                  className="gap-1.5 text-[var(--ember)] border-[var(--ember)]/30 hover:bg-[var(--ember)]/5"
+                >
+                  <Unplug className="h-3.5 w-3.5" />
+                  Disconnect
+                </Button>
+              </div>
+            ) : (
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  void handleConnect();
+                }}
+                className="space-y-4"
+              >
+                <div className="rounded-md bg-[var(--linen)] border border-[var(--slate)] p-3 mb-2">
+                  <p className="text-[11px] text-[var(--ash)] leading-relaxed">
+                    This is a temporary manual setup. You&apos;ll need to create
+                    your own Meta App and grab these values from the{" "}
+                    <a
+                      href="https://developers.facebook.com/apps/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-medium text-[var(--cedar)] hover:underline"
+                    >
+                      Meta Developer Dashboard
+                    </a>{" "}
+                    (API Setup &gt; Access Tokens &amp; Webhooks). A one-click
+                    connection flow is coming soon.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="wa-phone">Display phone number</Label>
+                    <Input
+                      id="wa-phone"
+                      value={waPhoneNumber}
+                      onChange={(e) => setWaPhoneNumber(e.target.value)}
+                      placeholder="+1 (555) 123-4567"
+                      required
+                    />
+                    <p className="text-[10px] text-[var(--ash)]">
+                      The number users will see. Found under your WhatsApp
+                      product&apos;s phone numbers list.
+                    </p>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="wa-phone-id">Phone Number ID</Label>
+                    <Input
+                      id="wa-phone-id"
+                      value={waPhoneNumberId}
+                      onChange={(e) => setWaPhoneNumberId(e.target.value)}
+                      placeholder="1279111028620961"
+                      required
+                    />
+                    <p className="text-[10px] text-[var(--ash)]">
+                      From Meta Dashboard &gt; WhatsApp &gt; API Setup &gt;
+                      Phone number ID.
+                    </p>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="wa-waba-id">
+                      WhatsApp Business Account ID
+                    </Label>
+                    <Input
+                      id="wa-waba-id"
+                      value={waMetaAccountId}
+                      onChange={(e) => setWaMetaAccountId(e.target.value)}
+                      placeholder="1591997058986436"
+                      required
+                    />
+                    <p className="text-[10px] text-[var(--ash)]">
+                      From Meta Dashboard &gt; WhatsApp &gt; API Setup &gt;
+                      WhatsApp Business Account ID.
+                    </p>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="wa-token">Access Token</Label>
+                    <Input
+                      id="wa-token"
+                      type="password"
+                      value={waAccessToken}
+                      onChange={(e) => setWaAccessToken(e.target.value)}
+                      placeholder="EAAG..."
+                      required
+                    />
+                    <p className="text-[10px] text-[var(--ash)]">
+                      From Meta Dashboard &gt; WhatsApp &gt; API Setup &gt;
+                      Temporary access token (or a permanent token from System
+                      Users).
+                    </p>
+                  </div>
+                </div>
+
+                {waFormError && (
+                  <div className="rounded-md bg-[var(--ember)]/8 border border-[var(--ember)]/20 py-2 px-3 text-xs font-medium text-[var(--ember)]">
+                    {waFormError}
+                  </div>
+                )}
+
+                <Button
+                  type="submit"
+                  size="sm"
+                  disabled={waFormLoading}
                   className="gap-1.5"
                 >
-                  {waConnecting ? (
+                  {waFormLoading ? (
                     <>
                       <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-                      Connecting via Meta...
+                      Connecting...
                     </>
                   ) : (
                     <>
                       <MessageSquare className="h-3.5 w-3.5" />
-                      Connect via Meta Cloud API
+                      Connect
                     </>
                   )}
                 </Button>
-                <p className="text-[10px] text-[var(--ash)] mt-3">
-                  You&apos;ll be redirected to Meta to authorise the connection.
-                  <br />
-                  Requires a Meta Business account with WhatsApp Business API
-                  access.
-                </p>
-              </div>
+              </form>
             )}
           </CardContent>
         </Card>
