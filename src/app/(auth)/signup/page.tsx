@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -21,6 +22,7 @@ const signupSchema = z
 type SignupValues = z.infer<typeof signupSchema>;
 
 export default function SignupPage() {
+  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
@@ -52,7 +54,7 @@ export default function SignupPage() {
       // Otherwise show a "check your email" message — the confirmation
       // link will hit /auth/callback and handle everything.
       if (authData.session) {
-        window.location.href = "/auth/callback";
+        router.push("/auth/callback");
       } else {
         setConfirmationSent(true);
       }
