@@ -24,6 +24,7 @@ export async function POST(request: NextRequest) {
     timestamp: string;
     type: string;
     text?: { body: string };
+    reaction?: { message_id: string; emoji: string };
   }> = body?.entry?.[0]?.changes?.[0]?.value?.messages ?? [];
   const contacts: Array<{
     wa_id: string;
@@ -68,6 +69,17 @@ export async function POST(request: NextRequest) {
 
   // ── 2. Process each message ──
   for (const msg of messages) {
+    // Skip reaction events — not a real message
+    if (msg.type === "reaction") {
+      console.log(
+        "[WhatsApp webhook] Skipping reaction event:",
+        msg.reaction?.emoji,
+        "on",
+        msg.reaction?.message_id,
+      );
+      continue;
+    }
+
     const contactProfile = contacts.find((c) => c.wa_id === msg.from);
     const contactName = contactProfile?.profile?.name ?? null;
 

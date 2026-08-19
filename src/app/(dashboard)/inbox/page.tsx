@@ -47,6 +47,7 @@ interface InboxMessage {
   sender: "agent" | "customer" | "human";
   text: string;
   time: string;
+  status?: "sending" | "sent" | "failed";
 }
 
 interface DisplayConversation {
@@ -264,7 +265,7 @@ export default function InboxPage() {
     [supabase],
   );
 
-  // ── Realtime subscription ──
+  // ── Realtime subscriptions ──
 
   useEffect(() => {
     if (!selectedId) return;
@@ -272,7 +273,8 @@ export default function InboxPage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchMessages(selectedId);
 
-    const channel = supabase
+    // Subscribe to new messages in the open conversation
+    const msgChannel = supabase
       .channel(`inbox-messages-${selectedId}`)
       .on(
         "postgres_changes",
@@ -284,22 +286,28 @@ export default function InboxPage() {
         },
         (payload) => {
           const msg = payload.new as DbMessage;
-          const mapped: InboxMessage = {
-            id: msg.id,
-            sender: mapSenderType(msg.sender_type),
-            text: msg.content,
-            time: formatTime(msg.created_at),
-          };
 
+          // Dedupe: skip if this message already exists (e.g. from optimistic insert)
           setConversations((prev) =>
             prev.map((c) => {
               if (c.id !== selectedId) return c;
+              if (c.messages.some((m) => m.id === msg.id)) return c;
+
               if (msg.is_internal_note) {
                 return { ...c, notes: [...c.notes, msg.content] };
               }
               return {
                 ...c,
-                messages: [...c.messages, mapped],
+                messages: [
+                  ...c.messages,
+                  {
+                    id: msg.id,
+                    sender: mapSenderType(msg.sender_type),
+                    text: msg.content,
+                    time: formatTime(msg.created_at),
+                    status: "sent" as const,
+                  },
+                ],
                 lastMessage: msg.content,
                 lastTime: "Just now",
               };
@@ -309,10 +317,51 @@ export default function InboxPage() {
       )
       .subscribe();
 
+    // Subscribe to conversation updates (last_message_at, status changes)
+    const convChannel = supabase
+      .channel("inbox-conversations")
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "conversations",
+        },
+        (payload) => {
+          const updated = payload.new as DbConversation;
+          setConversations((prev) =>
+            prev.map((c) => {
+              if (c.id !== updated.id) return c;
+              return {
+                ...c,
+                mode: updated.status,
+                lastTime: updated.last_message_at
+                  ? formatRelativeTime(updated.last_message_at)
+                  : c.lastTime,
+              };
+            }),
+          );
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "conversations",
+        },
+        () => {
+          // New conversation — refetch the full list
+          void fetchConversations();
+        },
+      )
+      .subscribe();
+
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(msgChannel);
+      supabase.removeChannel(convChannel);
     };
-  }, [selectedId, supabase, fetchMessages]);
+  }, [selectedId, supabase, fetchMessages, fetchConversations]);
 
   // ── Auto-scroll on new messages ──
 
@@ -364,12 +413,44 @@ export default function InboxPage() {
   const handleSendReply = useCallback(async () => {
     if (!selected || !replyText.trim()) return;
     const text = replyText.trim();
+    const tempId = `temp-${Date.now()}`;
 
-    const res = await fetch("/api/messages/send", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ conversationId: selected.id, text }),
-    });
+    // Optimistic: add message to UI immediately
+    const optimisticMsg: InboxMessage = {
+      id: tempId,
+      sender: "human",
+      text,
+      time: "Just now",
+      status: "sending",
+    };
+    setConversations((prev) =>
+      prev.map((c) =>
+        c.id === selected.id
+          ? { ...c, messages: [...c.messages, optimisticMsg], lastMessage: text, lastTime: "Just now" }
+          : c,
+      ),
+    );
+    setReplyText("");
+
+    // Background: call API route
+    let res: Response;
+    try {
+      res = await fetch("/api/messages/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ conversationId: selected.id, text }),
+      });
+    } catch {
+      // Network error — mark as failed
+      setConversations((prev) =>
+        prev.map((c) =>
+          c.id === selected.id
+            ? { ...c, messages: c.messages.map((m) => m.id === tempId ? { ...m, status: "failed" as const } : m) }
+            : c,
+        ),
+      );
+      return;
+    }
 
     const body = await res.json().catch(() => null);
 
@@ -378,6 +459,13 @@ export default function InboxPage() {
         "[Inbox] Send failed:",
         body?.error ?? body?.warning ?? `HTTP ${res.status}`,
       );
+      setConversations((prev) =>
+        prev.map((c) =>
+          c.id === selected.id
+            ? { ...c, messages: c.messages.map((m) => m.id === tempId ? { ...m, status: "failed" as const } : m) }
+            : c,
+        ),
+      );
       return;
     }
 
@@ -385,20 +473,15 @@ export default function InboxPage() {
       console.warn("[Inbox] Send partial:", body.warning);
     }
 
-    const newMsg: InboxMessage = {
-      id: body.messageId ?? `temp-${Date.now()}`,
-      sender: "human",
-      text,
-      time: "Just now",
-    };
+    // Replace temp ID with real message ID from server
+    const realId = body.messageId as string;
     setConversations((prev) =>
       prev.map((c) =>
         c.id === selected.id
-          ? { ...c, messages: [...c.messages, newMsg], lastMessage: text, lastTime: "Just now" }
+          ? { ...c, messages: c.messages.map((m) => m.id === tempId ? { ...m, id: realId, status: "sent" as const } : m) }
           : c,
       ),
     );
-    setReplyText("");
   }, [selected, replyText]);
 
   const handleAddNote = useCallback(async () => {
@@ -614,6 +697,8 @@ export default function InboxPage() {
                 const isAgent = msg.sender === "agent";
                 const isHuman = msg.sender === "human";
                 const isCustomer = msg.sender === "customer";
+                const isFailed = msg.status === "failed";
+                const isSending = msg.status === "sending";
 
                 return (
                   <div
@@ -629,7 +714,9 @@ export default function InboxPage() {
                         isCustomer &&
                           "bg-white border border-[var(--slate)] text-[var(--ink)]",
                         isAgent && "bg-[var(--cedar)] text-white",
-                        isHuman && "bg-[var(--ink)] text-white",
+                        isHuman && !isFailed && "bg-[var(--ink)] text-white",
+                        isFailed && "bg-[var(--ink)]/80 text-white opacity-70 border border-[var(--ember)]/40",
+                        isSending && "bg-[var(--ink)]/80 text-white opacity-60",
                       )}
                     >
                       {/* Sender label */}
@@ -646,14 +733,24 @@ export default function InboxPage() {
                         </div>
                       )}
                       <p className="text-sm leading-relaxed">{msg.text}</p>
-                      <p
-                        className={cn(
-                          "text-[10px] mt-1 font-[family-name:var(--font-jetbrains-mono)]",
-                          isCustomer ? "text-[var(--ash)]" : "opacity-60",
+                      <div className="flex items-center gap-1.5 mt-1">
+                        <p
+                          className={cn(
+                            "text-[10px] font-[family-name:var(--font-jetbrains-mono)]",
+                            isCustomer ? "text-[var(--ash)]" : "opacity-60",
+                          )}
+                        >
+                          {msg.time}
+                        </p>
+                        {isFailed && (
+                          <span className="text-[10px] text-[var(--ember)] font-medium">
+                            Failed to send
+                          </span>
                         )}
-                      >
-                        {msg.time}
-                      </p>
+                        {isSending && (
+                          <span className="h-2.5 w-2.5 rounded-full border border-white/40 border-t-white/80 animate-spin" />
+                        )}
+                      </div>
                     </div>
                   </div>
                 );
