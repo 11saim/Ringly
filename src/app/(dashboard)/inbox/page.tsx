@@ -287,12 +287,37 @@ export default function InboxPage() {
         (payload) => {
           const msg = payload.new as DbMessage;
 
-          // Dedupe: skip if this message already exists (e.g. from optimistic insert)
           setConversations((prev) =>
             prev.map((c) => {
               if (c.id !== selectedId) return c;
+
+              // 1. Exact ID match — already in the list, skip
               if (c.messages.some((m) => m.id === msg.id)) return c;
 
+              // 2. Find a matching optimistic entry (temp id, same text, still sending)
+              const sender = mapSenderType(msg.sender_type);
+              const optimisticIdx = c.messages.findIndex(
+                (m) =>
+                  m.id.startsWith("temp-") &&
+                  m.status === "sending" &&
+                  m.sender === sender &&
+                  m.text === msg.content,
+              );
+
+              if (optimisticIdx !== -1) {
+                // Replace the optimistic entry with the real one
+                const updated = [...c.messages];
+                updated[optimisticIdx] = {
+                  id: msg.id,
+                  sender,
+                  text: msg.content,
+                  time: formatTime(msg.created_at),
+                  status: "sent",
+                };
+                return { ...c, messages: updated };
+              }
+
+              // 3. Genuinely new message (from another source) — append
               if (msg.is_internal_note) {
                 return { ...c, notes: [...c.notes, msg.content] };
               }
@@ -302,10 +327,10 @@ export default function InboxPage() {
                   ...c.messages,
                   {
                     id: msg.id,
-                    sender: mapSenderType(msg.sender_type),
+                    sender,
                     text: msg.content,
                     time: formatTime(msg.created_at),
-                    status: "sent" as const,
+                    status: "sent",
                   },
                 ],
                 lastMessage: msg.content,
