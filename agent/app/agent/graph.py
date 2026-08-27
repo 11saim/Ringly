@@ -1,9 +1,9 @@
-from langchain_ollama import ChatOllama
+from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 from langgraph.graph import StateGraph, START, END
 from typing import TypedDict
 
-from app.config import OLLAMA_BASE_URL
+from app.config import OLLAMA_API_KEY
 
 
 class AgentState(TypedDict):
@@ -13,7 +13,11 @@ class AgentState(TypedDict):
 
 
 def _call_model(state: AgentState) -> dict:
-    llm = ChatOllama(model="glm-4.7-flash", base_url=OLLAMA_BASE_URL)
+    llm = ChatOpenAI(
+        model="gpt-oss:20b-cloud",
+        api_key=OLLAMA_API_KEY,
+        base_url="https://ollama.com/v1",
+    )
 
     lc_messages = [SystemMessage(content=state["system_prompt"])]
     for msg in state["messages"]:

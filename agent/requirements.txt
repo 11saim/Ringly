@@ -1,6 +1,6 @@
 fastapi
 uvicorn
 langgraph
-langchain-ollama
+langchain-openai
 supabase
 python-dotenv
