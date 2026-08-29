@@ -3,7 +3,10 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   AlertTriangle,
+  ChevronDown,
+  ChevronRight,
   Edit,
+  FileJson,
   ImagePlus,
   Package,
   Plus,
@@ -414,6 +417,175 @@ function ProductDialog({
   );
 }
 
+// ── Bulk Import Dialog ──
+
+interface ImportResult {
+  successCount: number;
+  failures: { index: number; reason: string; raw: unknown }[];
+}
+
+function BulkImportDialog({
+  open,
+  onOpenChange,
+  businessType,
+  onImport,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  businessType: "Service" | "Product";
+  onImport: (items: Record<string, unknown>[]) => Promise<ImportResult>;
+}) {
+  const [jsonInput, setJsonInput] = useState("");
+  const [importing, setImporting] = useState(false);
+  const [result, setResult] = useState<ImportResult | null>(null);
+  const [parseError, setParseError] = useState<string | null>(null);
+  const [showExample, setShowExample] = useState(false);
+
+  const serviceExample = [
+    { name: "Haircut", description: "Classic haircut and style", duration_minutes: 30, price: 25.0 },
+    { name: "Beard Trim", description: "Precision beard shaping", duration_minutes: 15, price: 12.0 },
+  ];
+
+  const productExample = [
+    { name: "Shampoo - 250ml", description: "Sulfate-free daily shampoo", price: 8.5, stock_quantity: 40, category: "Hair Care" },
+    { name: "Hair Wax", description: "Strong hold matte finish", price: 6.0, stock_quantity: 25, category: "Styling" },
+  ];
+
+  const exampleJson = businessType === "Service" ? serviceExample : productExample;
+
+  const handleImport = async () => {
+    setParseError(null);
+    setResult(null);
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(jsonInput);
+    } catch {
+      setParseError("Invalid JSON. Please check the syntax and try again.");
+      return;
+    }
+
+    if (!Array.isArray(parsed)) {
+      setParseError("Expected a JSON array. Please provide an array of objects.");
+      return;
+    }
+
+    if (parsed.length === 0) {
+      setParseError("The array is empty. Please add at least one item.");
+      return;
+    }
+
+    setImporting(true);
+    const importResult = await onImport(parsed);
+    setResult(importResult);
+    setImporting(false);
+
+    if (importResult.failures.length === 0) {
+      setTimeout(() => {
+        setJsonInput("");
+        setResult(null);
+        onOpenChange(false);
+      }, 1200);
+    }
+  };
+
+  const handleClose = () => {
+    setJsonInput("");
+    setResult(null);
+    setParseError(null);
+    onOpenChange(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <FileJson className="h-4 w-4" />
+            Import {businessType === "Service" ? "Services" : "Products"} from JSON
+          </DialogTitle>
+          <DialogDescription>
+            Paste a JSON array of {businessType === "Service" ? "services" : "products"} to add them all at once.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-3">
+          <button
+            type="button"
+            onClick={() => setShowExample(!showExample)}
+            className="flex items-center gap-1.5 text-xs text-[var(--cedar)] hover:text-[var(--ink)] transition-colors"
+          >
+            {showExample ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+            See example format
+          </button>
+
+          {showExample && (
+            <pre className="rounded-md bg-[var(--linen)] border border-[var(--slate)] p-3 text-[11px] font-[family-name:var(--font-jetbrains-mono)] text-[var(--ink)] overflow-x-auto max-h-40 overflow-y-auto">
+              {JSON.stringify(exampleJson, null, 2)}
+            </pre>
+          )}
+
+          <Textarea
+            value={jsonInput}
+            onChange={(e) => setJsonInput(e.target.value)}
+            placeholder={`Paste your JSON array here...\n\nExample:\n${JSON.stringify(exampleJson, null, 2)}`}
+            className="min-h-[180px] font-[family-name:var(--font-jetbrains-mono)] text-xs"
+            disabled={importing}
+          />
+
+          {parseError && (
+            <div className="rounded-md border border-[var(--ember)]/30 bg-[var(--ember)]/5 px-3 py-2.5">
+              <p className="text-xs text-[var(--ember)]">{parseError}</p>
+            </div>
+          )}
+
+          {result && (
+            <div className="space-y-2">
+              {result.successCount > 0 && (
+                <div className="rounded-md border border-[var(--cedar)]/30 bg-[var(--mist)]/30 px-3 py-2.5">
+                  <p className="text-xs text-[var(--cedar)] font-medium">
+                    Successfully imported {result.successCount} {result.successCount === 1 ? "item" : "items"}.
+                  </p>
+                </div>
+              )}
+              {result.failures.length > 0 && (
+                <div className="rounded-md border border-[var(--ember)]/30 bg-[var(--ember)]/5 px-3 py-2.5 max-h-40 overflow-y-auto">
+                  <p className="text-xs text-[var(--ember)] font-medium mb-1">
+                    {result.failures.length} {result.failures.length === 1 ? "row" : "rows"} failed validation:
+                  </p>
+                  {result.failures.map((f) => (
+                    <p key={f.index} className="text-[11px] text-[var(--ember)]/80">
+                      Row {f.index + 1}: {f.reason}
+                    </p>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        <DialogFooter>
+          <Button variant="ghost" onClick={handleClose} disabled={importing}>
+            {result && result.failures.length === 0 ? "Close" : "Cancel"}
+          </Button>
+          <Button
+            onClick={() => void handleImport()}
+            disabled={!jsonInput.trim() || importing || (result !== null && result.failures.length === 0)}
+            className="gap-1.5"
+          >
+            {importing ? (
+              <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <FileJson className="h-3.5 w-3.5" />
+            )}
+            {importing ? "Importing..." : "Import"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // ── Main Component ──
 
 export function OfferingsTab() {
@@ -434,6 +606,7 @@ export function OfferingsTab() {
     null,
   );
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
 
   // Fetch data from Supabase
   const fetchData = useCallback(async () => {
@@ -703,6 +876,83 @@ export function OfferingsTab() {
     return null;
   };
 
+  // ── Bulk import ──
+
+  const handleBulkImport = async (items: Record<string, unknown>[]): Promise<ImportResult> => {
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return { successCount: 0, failures: items.map((raw, i) => ({ index: i, reason: "Not authenticated", raw })) };
+
+    const table = isService ? "services" : "products";
+    const successes: string[] = [];
+    const failures: ImportResult["failures"] = [];
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+
+      if (!item || typeof item !== "object") {
+        failures.push({ index: i, reason: "Item is not an object", raw: item });
+        continue;
+      }
+
+      if (typeof item.name !== "string" || !item.name.trim()) {
+        failures.push({ index: i, reason: "Missing or invalid \"name\" (must be a non-empty string)", raw: item });
+        continue;
+      }
+
+      if (typeof item.price !== "number" || item.price < 0) {
+        failures.push({ index: i, reason: "Missing or invalid \"price\" (must be a non-negative number)", raw: item });
+        continue;
+      }
+
+      let row: Record<string, unknown>;
+      if (isService) {
+        if (typeof item.duration_minutes !== "number" || item.duration_minutes <= 0) {
+          failures.push({ index: i, reason: "Missing or invalid \"duration_minutes\" (must be a positive number)", raw: item });
+          continue;
+        }
+        row = {
+          tenant_id: user.id,
+          name: (item.name as string).trim(),
+          description: typeof item.description === "string" ? item.description.trim() || null : null,
+          duration_minutes: item.duration_minutes,
+          price: item.price,
+        };
+      } else {
+        row = {
+          tenant_id: user.id,
+          name: (item.name as string).trim(),
+          description: typeof item.description === "string" ? item.description.trim() || null : null,
+          price: item.price,
+          stock_quantity: typeof item.stock_quantity === "number" ? item.stock_quantity : 0,
+          low_stock_threshold: typeof item.low_stock_threshold === "number" ? item.low_stock_threshold : 10,
+          category: typeof item.category === "string" ? item.category.trim() || null : null,
+        };
+      }
+
+      const { data: inserted, error } = await supabase
+        .from(table)
+        .insert(row)
+        .select()
+        .single();
+
+      if (error) {
+        failures.push({ index: i, reason: error.message || "Database insert failed", raw: item });
+      } else if (inserted) {
+        successes.push(inserted.id);
+        if (isService) {
+          setServices((prev) => [...prev, { ...row, id: inserted.id, is_active: true, staff_ids: [] } as unknown as ServiceRow]);
+        } else {
+          setProducts((prev) => [...prev, { ...row, id: inserted.id, is_active: true } as unknown as ProductRow]);
+        }
+      }
+    }
+
+    return { successCount: successes.length, failures };
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -728,17 +978,28 @@ export function OfferingsTab() {
                   {services.length} service
                   {services.length !== 1 ? "s" : ""}
                 </p>
-                <Button
-                  size="sm"
-                  onClick={() => {
-                    setEditingService(null);
-                    setDialogOpen(true);
-                  }}
-                  className="gap-1.5"
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                  Add service
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setImportDialogOpen(true)}
+                    className="gap-1.5"
+                  >
+                    <FileJson className="h-3.5 w-3.5" />
+                    Import JSON
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      setEditingService(null);
+                      setDialogOpen(true);
+                    }}
+                    className="gap-1.5"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    Add service
+                  </Button>
+                </div>
               </div>
 
               <Table>
@@ -835,6 +1096,13 @@ export function OfferingsTab() {
             onSave={(data) => void saveService(data)}
             onAddStaff={addStaff}
           />
+
+          <BulkImportDialog
+            open={importDialogOpen}
+            onOpenChange={setImportDialogOpen}
+            businessType="Service"
+            onImport={handleBulkImport}
+          />
         </section>
       )}
 
@@ -869,17 +1137,28 @@ export function OfferingsTab() {
                     of stock
                   </span>
                 </p>
-                <Button
-                  size="sm"
-                  onClick={() => {
-                    setEditingProduct(null);
-                    setDialogOpen(true);
-                  }}
-                  className="gap-1.5"
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                  Add product
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setImportDialogOpen(true)}
+                    className="gap-1.5"
+                  >
+                    <FileJson className="h-3.5 w-3.5" />
+                    Import JSON
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      setEditingProduct(null);
+                      setDialogOpen(true);
+                    }}
+                    className="gap-1.5"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    Add product
+                  </Button>
+                </div>
               </div>
 
               <Table>
@@ -996,6 +1275,13 @@ export function OfferingsTab() {
             }}
             product={editingProduct}
             onSave={(data) => void saveProduct(data)}
+          />
+
+          <BulkImportDialog
+            open={importDialogOpen}
+            onOpenChange={setImportDialogOpen}
+            businessType="Product"
+            onImport={handleBulkImport}
           />
         </section>
       )}
