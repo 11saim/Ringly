@@ -40,6 +40,7 @@ export interface DocumentItem {
 
 export interface OnboardingData {
   businessType: BusinessType | null;
+  businessName: string;
   whatsappConnected: boolean;
   description: string;
   industry: string;
@@ -71,6 +72,7 @@ export interface OnboardingData {
 
 export const defaultOnboardingData: OnboardingData = {
   businessType: null,
+  businessName: "",
   whatsappConnected: false,
   description: "",
   industry: "",

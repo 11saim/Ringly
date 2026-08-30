@@ -962,10 +962,6 @@ export function OfferingsTab() {
     );
   }
 
-  if (!tenant.businessType) {
-    return null;
-  }
-
   return (
     <div className="space-y-6">
       {/* ── Service Variant ── */}

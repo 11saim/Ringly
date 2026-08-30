@@ -24,7 +24,8 @@ const TenantContext = createContext<TenantContextValue>({
   loading: true,
 });
 
-function deriveInitials(name: string): string {
+function deriveInitials(name: string | null): string {
+  if (!name) return "?";
   return name
     .split(/\s+/)
     .filter(Boolean)
@@ -33,7 +34,8 @@ function deriveInitials(name: string): string {
     .join("");
 }
 
-function deriveHandle(name: string): string {
+function deriveHandle(name: string | null): string {
+  if (!name) return "";
   return name
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
@@ -49,17 +51,33 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
 
     async function load() {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data: { user }, error: authErr } = await supabase.auth.getUser();
+        if (authErr) {
+          console.error("[tenant-context] auth.getUser error:", authErr.message);
+          setLoading(false);
+          return;
+        }
         if (!user) {
+          console.log("[tenant-context] No authenticated user");
           setLoading(false);
           return;
         }
 
-        const { data } = await supabase
+        console.log("[tenant-context] Fetching tenant for user:", user.id);
+
+        const { data, error: tenantErr } = await supabase
           .from("tenants")
           .select("*")
           .eq("id", user.id)
           .single();
+
+        if (tenantErr) {
+          console.error("[tenant-context] Tenant query error:", tenantErr.message, "code:", tenantErr.code);
+          setLoading(false);
+          return;
+        }
+
+        console.log("[tenant-context] Raw tenant row:", JSON.stringify(data, null, 2));
 
         if (data) {
           const businessType: BusinessType | null = data.business_type
@@ -67,7 +85,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
             : null;
 
           console.log(
-            "[tenant-context] Loaded business_type:",
+            "[tenant-context] business_type raw:",
             JSON.stringify(data.business_type),
             "-> mapped to:",
             JSON.stringify(businessType),
@@ -81,9 +99,11 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
             plan: "Free",
             avatarInitials: deriveInitials(data.business_name),
           });
+        } else {
+          console.log("[tenant-context] No tenant row found for user:", user.id);
         }
-      } catch {
-        // Session or tenant fetch failed — route protection should prevent this
+      } catch (err) {
+        console.error("[tenant-context] Unexpected error:", err);
       } finally {
         setLoading(false);
       }
@@ -109,8 +129,15 @@ const fallbackTenant: Tenant = {
 };
 
 export function useTenant() {
-  const { tenant } = useContext(TenantContext);
-  return tenant ?? fallbackTenant;
+  const { tenant, loading } = useContext(TenantContext);
+  const result = tenant ?? fallbackTenant;
+  console.log(
+    "[useTenant] loading:",
+    loading,
+    "tenant:",
+    tenant ? `id=${tenant.id} businessType=${JSON.stringify(tenant.businessType)}` : "null (using fallback)",
+  );
+  return result;
 }
 
 export function useTenantContext() {

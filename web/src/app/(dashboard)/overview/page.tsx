@@ -558,8 +558,6 @@ export default function OverviewPage() {
 
   if (tenantLoading || loading) return <OverviewSkeleton />;
 
-  if (!businessType) return null;
-
   const hasEscalations = escalations.length > 0;
   const liveTotal = liveAgent + liveHuman;
   const revenueDelta = revenueThisWeek - revenueLastWeek;

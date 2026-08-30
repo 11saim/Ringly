@@ -83,6 +83,7 @@ export function StepReview({
 
       <div className="space-y-4">
         <ReviewSection icon={Building2} title="Business type" editStep={0} onEdit={onEdit}>
+          {data.businessName && <p className="font-medium text-[var(--ink)]">{data.businessName}</p>}
           <p className="capitalize">{data.businessType} business</p>
         </ReviewSection>
 

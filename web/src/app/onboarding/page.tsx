@@ -24,7 +24,7 @@ const TOTAL_STEPS = 8;
 function canProceed(data: OnboardingData, step: number): boolean {
   switch (step) {
     case 0:
-      return data.businessType !== null;
+      return data.businessType !== null && data.businessName.trim().length > 0;
     case 1:
       return true;
     case 2:
@@ -95,11 +95,12 @@ export default function OnboardingPage() {
         return;
       }
 
-      // 1. Update tenant business_type
+      // 1. Update tenant business_type and business_name
       const { error: tenantErr } = await supabase
         .from("tenants")
         .update({
           business_type: data.businessType,
+          business_name: data.businessName.trim() || null,
           description: data.description || null,
           industry: data.industry || null,
           timezone: data.timezone,
@@ -248,7 +249,9 @@ export default function OnboardingPage() {
         return (
           <StepBusinessType
             value={data.businessType}
+            businessName={data.businessName}
             onChange={(v) => update({ businessType: v })}
+            onBusinessNameChange={(v) => update({ businessName: v })}
           />
         );
       case 1:

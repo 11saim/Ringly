@@ -2,14 +2,20 @@
 
 import { Scissors, Package } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import type { BusinessType } from "./types";
 
 export function StepBusinessType({
   value,
+  businessName,
   onChange,
+  onBusinessNameChange,
 }: {
   value: BusinessType | null;
+  businessName: string;
   onChange: (v: BusinessType) => void;
+  onBusinessNameChange: (v: string) => void;
 }) {
   const options: { type: BusinessType; icon: React.ElementType; label: string; desc: string }[] = [
     { type: "service", icon: Scissors, label: "Service business", desc: "Appointments, consultations, bookings" },
@@ -25,7 +31,7 @@ export function StepBusinessType({
         This determines which features are shown throughout the dashboard.
       </p>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
         {options.map(({ type, icon: Icon, label, desc }) => (
           <button
             key={type}
@@ -53,6 +59,22 @@ export function StepBusinessType({
             </div>
           </button>
         ))}
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="business-name" className="text-sm font-medium text-[var(--ink)]">
+          Business name
+        </Label>
+        <Input
+          id="business-name"
+          value={businessName}
+          onChange={(e) => onBusinessNameChange(e.target.value)}
+          placeholder="e.g. Studio Bloom"
+          className="max-w-sm"
+        />
+        <p className="text-xs text-[var(--ash)]">
+          Your business name as it appears to customers.
+        </p>
       </div>
     </div>
   );
