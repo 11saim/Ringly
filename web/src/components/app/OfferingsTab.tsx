@@ -37,7 +37,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { useTenant } from "@/lib/tenant-context";
+import { useTenant, useTenantContext } from "@/lib/tenant-context";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -590,6 +590,7 @@ function BulkImportDialog({
 
 export function OfferingsTab() {
   const tenant = useTenant();
+  const { loading: tenantLoading } = useTenantContext();
   const isService = tenant.businessType === "Service";
 
   // Loading state
@@ -953,12 +954,16 @@ export function OfferingsTab() {
     return { successCount: successes.length, failures };
   };
 
-  if (loading) {
+  if (tenantLoading || loading) {
     return (
       <div className="flex items-center justify-center py-20">
         <RefreshCw className="h-5 w-5 text-[var(--ash)] animate-spin" />
       </div>
     );
+  }
+
+  if (!tenant.businessType) {
+    return null;
   }
 
   return (

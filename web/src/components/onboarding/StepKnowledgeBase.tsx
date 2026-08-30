@@ -196,7 +196,7 @@ export function StepKnowledgeBase({
   onChange,
 }: {
   data: OnboardingData;
-  onChange: (patch: Partial<OnboardingData>) => void;
+  onChange: (patch: Partial<OnboardingData> | ((prev: OnboardingData) => Partial<OnboardingData>)) => void;
 }) {
   const [pasteText, setPasteText] = useState("");
   const [pasteLabel, setPasteLabel] = useState("");
@@ -248,7 +248,7 @@ export function StepKnowledgeBase({
         answer: (item.answer as string).trim(),
       };
     });
-    onChange({ faqs: [...data.faqs, ...newFaqs] });
+    onChange((prev) => ({ ...prev, faqs: [...prev.faqs, ...newFaqs] }));
 
     return { successCount: successes.length, failures };
   }

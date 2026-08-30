@@ -214,7 +214,7 @@ export function StepOfferings({
   onChange,
 }: {
   data: OnboardingData;
-  onChange: (patch: Partial<OnboardingData>) => void;
+  onChange: (patch: Partial<OnboardingData> | ((prev: OnboardingData) => Partial<OnboardingData>)) => void;
 }) {
   const isService = data.businessType === "service";
   const [editingIdx, setEditingIdx] = useState<number | null>(null);
@@ -311,7 +311,7 @@ export function StepOfferings({
           price: item.price as number,
         };
       });
-      onChange({ services: [...data.services, ...newServices] });
+      onChange((prev) => ({ ...prev, services: [...prev.services, ...newServices] }));
     } else {
       const newProducts: ProductItem[] = successes.map((i) => {
         const item = items[i];
@@ -324,7 +324,7 @@ export function StepOfferings({
           category: typeof item.category === "string" ? item.category.trim() : "",
         };
       });
-      onChange({ products: [...data.products, ...newProducts] });
+      onChange((prev) => ({ ...prev, products: [...prev.products, ...newProducts] }));
     }
 
     return { successCount: successes.length, failures };

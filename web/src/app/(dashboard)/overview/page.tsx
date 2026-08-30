@@ -29,7 +29,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { createClient } from "@/lib/supabase/client";
-import { useTenant } from "@/lib/tenant-context";
+import { useTenant, useTenantContext } from "@/lib/tenant-context";
 import { cn } from "@/lib/utils";
 
 // ── Types ──
@@ -218,6 +218,7 @@ function OverviewSkeleton() {
 
 export default function OverviewPage() {
   const { businessType } = useTenant();
+  const { loading: tenantLoading } = useTenantContext();
   const isService = businessType === "Service";
   const [loading, setLoading] = useState(true);
   const [escalations, setEscalations] = useState<Escalation[]>([]);
@@ -555,7 +556,9 @@ export default function OverviewPage() {
     fetchOverview();
   }, [fetchOverview]);
 
-  if (loading) return <OverviewSkeleton />;
+  if (tenantLoading || loading) return <OverviewSkeleton />;
+
+  if (!businessType) return null;
 
   const hasEscalations = escalations.length > 0;
   const liveTotal = liveAgent + liveHuman;

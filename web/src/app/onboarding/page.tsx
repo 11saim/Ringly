@@ -55,8 +55,13 @@ export default function OnboardingPage() {
   const [maxReached, setMaxReached] = useState(0);
 
   const update = useCallback(
-    (patch: Partial<OnboardingData>) =>
-      setData((prev) => ({ ...prev, ...patch })),
+    (patch: Partial<OnboardingData> | ((prev: OnboardingData) => Partial<OnboardingData>)) => {
+      if (typeof patch === "function") {
+        setData((prev) => ({ ...prev, ...patch(prev) }));
+      } else {
+        setData((prev) => ({ ...prev, ...patch }));
+      }
+    },
     []
   );
 

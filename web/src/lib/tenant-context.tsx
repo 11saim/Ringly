@@ -66,6 +66,13 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
             ? (data.business_type.charAt(0).toUpperCase() + data.business_type.slice(1)) as BusinessType
             : null;
 
+          console.log(
+            "[tenant-context] Loaded business_type:",
+            JSON.stringify(data.business_type),
+            "-> mapped to:",
+            JSON.stringify(businessType),
+          );
+
           setTenant({
             id: data.id,
             name: data.business_name,
