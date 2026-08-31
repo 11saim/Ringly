@@ -71,12 +71,6 @@ export async function POST(request: NextRequest) {
   for (const msg of messages) {
     // Skip reaction events — not a real message
     if (msg.type === "reaction") {
-      console.log(
-        "[WhatsApp webhook] Skipping reaction event:",
-        msg.reaction?.emoji,
-        "on",
-        msg.reaction?.message_id,
-      );
       continue;
     }
 
@@ -236,13 +230,6 @@ export async function POST(request: NextRequest) {
       );
     }
   }
-
-  console.log(
-    "[WhatsApp webhook] Processed",
-    messages.length,
-    "message(s) for tenant",
-    tenantId,
-  );
 
   return NextResponse.json({ ok: true }, { status: 200 });
 }

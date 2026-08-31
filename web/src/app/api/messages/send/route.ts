@@ -137,15 +137,6 @@ export async function POST(request: NextRequest) {
   // ── 7. Send via WhatsApp Cloud API ──
   const url = `${GRAPH_API_URL}/${waConnection.phone_number_id}/messages`;
 
-  console.log(
-    "[Messages send] Sending to",
-    contact.phone,
-    "via phone_number_id",
-    waConnection.phone_number_id,
-    "for tenant",
-    tenantId,
-  );
-
   let res: Response;
   try {
     res = await fetch(url, {
@@ -186,11 +177,6 @@ export async function POST(request: NextRequest) {
         `Meta API HTTP ${res.status}`,
     });
   }
-
-  console.log(
-    "[Messages send] Success:",
-    JSON.stringify({ messageId: message.id, meta: metaBody.messages }, null, 2),
-  );
 
   return NextResponse.json({ ok: true, messageId: message.id });
 }
