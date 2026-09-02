@@ -205,7 +205,6 @@ export interface Service {
   duration: string;
   price: number;
   description: string;
-  staff: string[];
   availability: string;
   active: boolean;
 }
@@ -223,12 +222,12 @@ export interface Product {
 }
 
 export const mockServices: Service[] = [
-  { id: "s1", name: "Balayage", duration: "2.5 hrs", price: 120, description: "Hand-painted highlights for a natural, sun-kissed look.", staff: ["Sarah A.", "Maria G."], availability: "Mon–Sat", active: true },
-  { id: "s2", name: "Men's Haircut", duration: "45 min", price: 22, description: "Classic or modern cut with styling.", staff: ["Ali K."], availability: "Mon–Fri", active: true },
-  { id: "s3", name: "Manicure & Pedicure", duration: "1.5 hrs", price: 45, description: "Full nail care with polish or gel finish.", staff: ["Priya P."], availability: "Tue–Sat", active: true },
-  { id: "s4", name: "Beard Trim", duration: "30 min", price: 15, description: "Precision trim and shaping with hot towel.", staff: ["Ali K."], availability: "Mon–Sat", active: true },
-  { id: "s5", name: "Facial Treatment", duration: "1 hr", price: 55, description: "Deep cleansing facial customized to skin type.", staff: ["Maria G."], availability: "Wed–Sat", active: false },
-  { id: "s6", name: "Hair Coloring", duration: "2 hrs", price: 95, description: "Full or partial color with premium products.", staff: ["Sarah A."], availability: "Mon–Sat", active: true },
+  { id: "s1", name: "Balayage", duration: "2.5 hrs", price: 120, description: "Hand-painted highlights for a natural, sun-kissed look.", availability: "Mon–Sat", active: true },
+  { id: "s2", name: "Men's Haircut", duration: "45 min", price: 22, description: "Classic or modern cut with styling.", availability: "Mon–Fri", active: true },
+  { id: "s3", name: "Manicure & Pedicure", duration: "1.5 hrs", price: 45, description: "Full nail care with polish or gel finish.", availability: "Tue–Sat", active: true },
+  { id: "s4", name: "Beard Trim", duration: "30 min", price: 15, description: "Precision trim and shaping with hot towel.", availability: "Mon–Sat", active: true },
+  { id: "s5", name: "Facial Treatment", duration: "1 hr", price: 55, description: "Deep cleansing facial customized to skin type.", availability: "Wed–Sat", active: false },
+  { id: "s6", name: "Hair Coloring", duration: "2 hrs", price: 95, description: "Full or partial color with premium products.", availability: "Mon–Sat", active: true },
 ];
 
 export const mockProducts: Product[] = [
@@ -391,7 +390,6 @@ export interface Booking {
   id: string;
   customer: string;
   service: string;
-  staff: string;
   date: string;
   time: string;
   status: "upcoming" | "completed" | "cancelled";
@@ -408,17 +406,17 @@ export interface Order {
 }
 
 export const mockBookings: Booking[] = [
-  { id: "b1", customer: "Sarah Ahmed", service: "Balayage", staff: "Sarah A.", date: "2026-07-27", time: "10:00 AM", status: "upcoming" },
-  { id: "b2", customer: "James Wilson", service: "Men's Haircut", staff: "Ali K.", date: "2026-07-27", time: "11:30 AM", status: "upcoming" },
-  { id: "b3", customer: "Maria Garcia", service: "Manicure & Pedicure", staff: "Priya P.", date: "2026-07-27", time: "2:00 PM", status: "upcoming" },
-  { id: "b4", customer: "Ali Khan", service: "Cut & Style", staff: "Ali K.", date: "2026-07-28", time: "3:30 PM", status: "upcoming" },
-  { id: "b5", customer: "Priya Patel", service: "Facial Treatment", staff: "Maria G.", date: "2026-07-28", time: "10:00 AM", status: "upcoming" },
-  { id: "b6", customer: "David Chen", service: "Balayage + Manicure", staff: "Sarah A.", date: "2026-07-29", time: "10:00 AM", status: "upcoming" },
-  { id: "b7", customer: "Emma Thompson", service: "Hair Coloring", staff: "Sarah A.", date: "2026-07-25", time: "11:00 AM", status: "completed" },
-  { id: "b8", customer: "Ali Khan", service: "Beard Trim", staff: "Ali K.", date: "2026-07-24", time: "3:30 PM", status: "completed" },
-  { id: "b9", customer: "Sarah Ahmed", service: "Manicure & Pedicure", staff: "Priya P.", date: "2026-07-22", time: "2:00 PM", status: "completed" },
-  { id: "b10", customer: "James Wilson", service: "Men's Haircut", staff: "Ali K.", date: "2026-07-20", time: "11:30 AM", status: "cancelled" },
-  { id: "b11", customer: "David Chen", service: "Facial Treatment", staff: "Maria G.", date: "2026-07-21", time: "10:00 AM", status: "cancelled" },
+  { id: "b1", customer: "Sarah Ahmed", service: "Balayage", date: "2026-07-27", time: "10:00 AM", status: "upcoming" },
+  { id: "b2", customer: "James Wilson", service: "Men's Haircut", date: "2026-07-27", time: "11:30 AM", status: "upcoming" },
+  { id: "b3", customer: "Maria Garcia", service: "Manicure & Pedicure", date: "2026-07-27", time: "2:00 PM", status: "upcoming" },
+  { id: "b4", customer: "Ali Khan", service: "Cut & Style", date: "2026-07-28", time: "3:30 PM", status: "upcoming" },
+  { id: "b5", customer: "Priya Patel", service: "Facial Treatment", date: "2026-07-28", time: "10:00 AM", status: "upcoming" },
+  { id: "b6", customer: "David Chen", service: "Balayage + Manicure", date: "2026-07-29", time: "10:00 AM", status: "upcoming" },
+  { id: "b7", customer: "Emma Thompson", service: "Hair Coloring", date: "2026-07-25", time: "11:00 AM", status: "completed" },
+  { id: "b8", customer: "Ali Khan", service: "Beard Trim", date: "2026-07-24", time: "3:30 PM", status: "completed" },
+  { id: "b9", customer: "Sarah Ahmed", service: "Manicure & Pedicure", date: "2026-07-22", time: "2:00 PM", status: "completed" },
+  { id: "b10", customer: "James Wilson", service: "Men's Haircut", date: "2026-07-20", time: "11:30 AM", status: "cancelled" },
+  { id: "b11", customer: "David Chen", service: "Facial Treatment", date: "2026-07-21", time: "10:00 AM", status: "cancelled" },
 ];
 
 export const mockOrders: Order[] = [

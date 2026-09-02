@@ -15,7 +15,7 @@ export const howItWorks = [
 ];
 
 export const features = [
-  { title: "Sync with real-time data", body: "Live inventory, calendars and staff schedules — the agent always knows what's available." },
+  { title: "Sync with real-time data", body: "Live inventory and calendars — the agent always knows what's available." },
   { title: "Take actions automatically", body: "Place orders, hold slots, send invoices, refund a customer — with the guardrails you set." },
   { title: "Compare AI models", body: "Try GPT, Claude and Gemini side-by-side on your real conversations before you ship." },
   { title: "Smart escalation", body: "Configurable handoff to a human the moment intent gets ambiguous or high-value." },
@@ -28,7 +28,7 @@ export const testimonials = [
   { quote: "It booked 41 appointments the first week. We haven't missed a WhatsApp since.", name: "Ana Reyes", role: "Owner, Bloom Studio", company: "Bloom" },
   { quote: "Feels like we hired someone who works nights and never forgets a price.", name: "Marc Duval", role: "GM, Bistro Nord", company: "Bistro Nord" },
   { quote: "Setup was ten minutes. Our resolution rate is 78%.", name: "Priya Shah", role: "COO, Verdant Care", company: "Verdant" },
-  { quote: "Our staff finally stopped copy-pasting the menu into WhatsApp.", name: "Diego Alvarez", role: "Founder, Casa Loma", company: "Casa Loma" },
+  { quote: "Our team finally stopped copy-pasting the menu into WhatsApp.", name: "Diego Alvarez", role: "Founder, Casa Loma", company: "Casa Loma" },
 ];
 
 export const conversations = [
@@ -50,11 +50,11 @@ export const catalogItems = [
 ];
 
 export const bookings = [
-  { id: "b1", customer: "Sofia N.", service: "Balayage", staff: "Ana", time: "10:00", day: "Mon", status: "confirmed" },
-  { id: "b2", customer: "James L.", service: "Men's Haircut", staff: "Luis", time: "11:30", day: "Mon", status: "confirmed" },
-  { id: "b3", customer: "Maria G.", service: "Blowout", staff: "Ana", time: "14:00", day: "Tue", status: "confirmed" },
-  { id: "b4", customer: "Kenji P.", service: "Women's Haircut", staff: "Ana", time: "16:30", day: "Wed", status: "pending" },
-  { id: "b5", customer: "Priya S.", service: "Bridal Package", staff: "Ana", time: "09:00", day: "Sat", status: "confirmed" },
+  { id: "b1", customer: "Sofia N.", service: "Balayage", time: "10:00", day: "Mon", status: "confirmed" },
+  { id: "b2", customer: "James L.", service: "Men's Haircut", time: "11:30", day: "Mon", status: "confirmed" },
+  { id: "b3", customer: "Maria G.", service: "Blowout", time: "14:00", day: "Tue", status: "confirmed" },
+  { id: "b4", customer: "Kenji P.", service: "Women's Haircut", time: "16:30", day: "Wed", status: "pending" },
+  { id: "b5", customer: "Priya S.", service: "Bridal Package", time: "09:00", day: "Sat", status: "confirmed" },
 ];
 
 export const questions = [
@@ -70,6 +70,5 @@ export const numbers = [
   { id: "n2", label: "Voice line", value: "+34 900 12 34 56", channel: "voice", active: true, msgs: [4, 6, 3, 8, 11, 9, 7] },
 ];
 
-export const staff = ["Ana", "Luis", "Camila"];
 export const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 export const hours = ["09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00"];

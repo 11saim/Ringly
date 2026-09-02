@@ -53,7 +53,6 @@ interface DbBookingRow {
   id: string;
   contact_id: string;
   service_id: string;
-  staff_id: string | null;
   scheduled_at: string;
   duration_minutes: number;
   status: "upcoming" | "completed" | "cancelled";
@@ -61,7 +60,6 @@ interface DbBookingRow {
   created_at: string;
   contacts: { name: string | null } | null;
   services: { name: string; duration_minutes: number } | null;
-  staff: { name: string } | null;
 }
 
 interface DbOrderRow {
@@ -92,11 +90,6 @@ interface ServiceOption {
   id: string;
   name: string;
   duration_minutes: number;
-}
-
-interface StaffOption {
-  id: string;
-  name: string;
 }
 
 interface ProductOption {
@@ -153,7 +146,6 @@ function mapDbBooking(b: DbBookingRow): Booking {
     id: b.id,
     customer: b.contacts?.name ?? "Unknown",
     service: b.services?.name ?? "Unknown",
-    staff: b.staff?.name ?? "Unassigned",
     date,
     time,
     status: b.status,
@@ -209,7 +201,6 @@ function BookingDialog({
   booking,
   contacts,
   services,
-  staffList,
   onSave,
 }: {
   open: boolean;
@@ -217,11 +208,9 @@ function BookingDialog({
   booking: DbBookingRow | null;
   contacts: ContactOption[];
   services: ServiceOption[];
-  staffList: StaffOption[];
   onSave: (form: {
     contact_id: string;
     service_id: string;
-    staff_id: string;
     scheduled_at: string;
     duration_minutes: number;
     status: string;
@@ -235,7 +224,6 @@ function BookingDialog({
       return {
         contact_id: booking.contact_id,
         service_id: booking.service_id,
-        staff_id: booking.staff_id ?? "",
         date,
         time,
         status: booking.status,
@@ -244,7 +232,6 @@ function BookingDialog({
     return {
       contact_id: "",
       service_id: "",
-      staff_id: "",
       date: new Date().toISOString().slice(0, 10),
       time: "10:00 AM",
       status: "upcoming" as string,
@@ -268,7 +255,6 @@ function BookingDialog({
     const result = await onSave({
       contact_id: form.contact_id,
       service_id: form.service_id,
-      staff_id: form.staff_id,
       scheduled_at: scheduledAt,
       duration_minutes: service?.duration_minutes ?? 60,
       status: form.status,
@@ -346,30 +332,6 @@ function BookingDialog({
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label>Staff</Label>
-              <Select
-                value={form.staff_id}
-                onValueChange={(v) => update("staff_id", v)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select staff" />
-                </SelectTrigger>
-                <SelectContent>
-                  {staffList.length === 0 ? (
-                    <div className="px-2 py-1.5 text-xs text-[var(--ash)]">
-                      No staff yet
-                    </div>
-                  ) : (
-                    staffList.map((s) => (
-                      <SelectItem key={s.id} value={s.id}>
-                        {s.name}
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
             <div className="space-y-1.5">
               <Label>Status</Label>
               <Select
@@ -856,7 +818,6 @@ export default function BookingsPage() {
   // ── Dropdown data ──
   const [contacts, setContacts] = useState<ContactOption[]>([]);
   const [serviceOptions, setServiceOptions] = useState<ServiceOption[]>([]);
-  const [staffOptions, setStaffOptions] = useState<StaffOption[]>([]);
   const [productOptions, setProductOptions] = useState<ProductOption[]>([]);
 
   // ── Mapped display data ──
@@ -900,7 +861,7 @@ export default function BookingsPage() {
       supabase
         .from("bookings")
         .select(
-          "*, contacts(name), services(name, duration_minutes), staff(name)",
+          "*, contacts(name), services(name, duration_minutes)",
         )
         .order("scheduled_at", { ascending: false }),
       supabase
@@ -917,20 +878,12 @@ export default function BookingsPage() {
 
     // Fetch offering options based on variant
     if (variant === "service") {
-      const [servicesResult, staffResult] = await Promise.all([
-        supabase
-          .from("services")
-          .select("id, name, duration_minutes")
-          .eq("is_active", true)
-          .order("name"),
-        supabase
-          .from("staff")
-          .select("id, name")
-          .eq("is_active", true)
-          .order("name"),
-      ]);
-      if (servicesResult.data) setServiceOptions(servicesResult.data);
-      if (staffResult.data) setStaffOptions(staffResult.data);
+      const { data: servicesResult } = await supabase
+        .from("services")
+        .select("id, name, duration_minutes")
+        .eq("is_active", true)
+        .order("name");
+      if (servicesResult) setServiceOptions(servicesResult);
     } else {
       const productsResult = await supabase
         .from("products")
@@ -976,7 +929,6 @@ export default function BookingsPage() {
     async (form: {
       contact_id: string;
       service_id: string;
-      staff_id: string;
       scheduled_at: string;
       duration_minutes: number;
       status: string;
@@ -992,7 +944,6 @@ export default function BookingsPage() {
         const statusOnlyChange =
           form.contact_id === editingBooking.contact_id &&
           form.service_id === editingBooking.service_id &&
-          form.staff_id === (editingBooking.staff_id ?? "") &&
           formDate === origDate &&
           formTime === origTime;
 
@@ -1002,7 +953,7 @@ export default function BookingsPage() {
             .update({ status: form.status })
             .eq("id", editingBooking.id)
             .select(
-              "*, contacts(name), services(name, duration_minutes), staff(name)",
+              "*, contacts(name), services(name, duration_minutes)",
             )
             .single();
 
@@ -1027,7 +978,6 @@ export default function BookingsPage() {
         const { data, error } = await supabase.rpc("create_booking", {
           p_contact_id: form.contact_id,
           p_service_id: form.service_id,
-          p_staff_id: form.staff_id || null,
           p_scheduled_at: form.scheduled_at,
           p_duration_minutes: form.duration_minutes,
         });
@@ -1037,7 +987,7 @@ export default function BookingsPage() {
         const { data: fullBooking } = await supabase
           .from("bookings")
           .select(
-            "*, contacts(name), services(name, duration_minutes), staff(name)",
+            "*, contacts(name), services(name, duration_minutes)",
           )
           .eq("id", (data as DbBookingRow).id)
           .single();
@@ -1053,7 +1003,6 @@ export default function BookingsPage() {
       const { data, error } = await supabase.rpc("create_booking", {
         p_contact_id: form.contact_id,
         p_service_id: form.service_id,
-        p_staff_id: form.staff_id || null,
         p_scheduled_at: form.scheduled_at,
         p_duration_minutes: form.duration_minutes,
       });
@@ -1063,7 +1012,7 @@ export default function BookingsPage() {
       const { data: fullBooking } = await supabase
         .from("bookings")
         .select(
-          "*, contacts(name), services(name, duration_minutes), staff(name)",
+          "*, contacts(name), services(name, duration_minutes)",
         )
         .eq("id", (data as DbBookingRow).id)
         .single();
@@ -1360,7 +1309,6 @@ export default function BookingsPage() {
                         <TableRow>
                           <TableHead>Customer</TableHead>
                           <TableHead>Service</TableHead>
-                          <TableHead>Staff</TableHead>
                           <TableHead>Date & Time</TableHead>
                           <TableHead>Status</TableHead>
                           <TableHead className="w-20" />
@@ -1369,7 +1317,7 @@ export default function BookingsPage() {
                       <TableBody>
                         {filteredBookings.length === 0 ? (
                           <TableRow>
-                            <TableCell colSpan={6} className="text-center py-12">
+                            <TableCell colSpan={5} className="text-center py-12">
                               <div className="flex flex-col items-center gap-2">
                                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--linen)]">
                                   <CalendarDays className="h-5 w-5 text-[var(--ash)]" />
@@ -1397,9 +1345,6 @@ export default function BookingsPage() {
                               </TableCell>
                               <TableCell className="text-sm text-[var(--ink)]">
                                 {b.service}
-                              </TableCell>
-                              <TableCell className="text-sm text-[var(--ash)]">
-                                {b.staff}
                               </TableCell>
                               <TableCell>
                                 <div className="text-sm text-[var(--ink)]">
@@ -1474,7 +1419,6 @@ export default function BookingsPage() {
                 booking={editingBooking}
                 contacts={contacts}
                 services={serviceOptions}
-                staffList={staffOptions}
                 onSave={saveBooking}
               />
             </section>

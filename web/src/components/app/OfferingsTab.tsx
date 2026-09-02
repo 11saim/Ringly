@@ -51,7 +51,6 @@ interface ServiceRow {
   duration_minutes: number;
   price: number;
   is_active: boolean;
-  staff_ids: string[];
 }
 
 interface ProductRow {
@@ -67,12 +66,6 @@ interface ProductRow {
   is_active: boolean;
 }
 
-interface StaffRow {
-  id: string;
-  name: string;
-  is_active: boolean;
-}
-
 // ── Empty forms ──
 
 const emptyService: Omit<ServiceRow, "id" | "tenant_id" | "is_active"> = {
@@ -80,7 +73,6 @@ const emptyService: Omit<ServiceRow, "id" | "tenant_id" | "is_active"> = {
   description: "",
   duration_minutes: 30,
   price: 0,
-  staff_ids: [],
 };
 
 const emptyProduct: Omit<ProductRow, "id" | "tenant_id" | "is_active"> = {
@@ -123,51 +115,22 @@ function ServiceDialog({
   open,
   onOpenChange,
   service,
-  staffOptions,
   onSave,
-  onAddStaff,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   service: ServiceRow | null;
-  staffOptions: StaffRow[];
   onSave: (data: Omit<ServiceRow, "id" | "tenant_id" | "is_active">) => void;
-  onAddStaff: (name: string) => Promise<StaffRow | null>;
 }) {
   const [form, setForm] = useState<Omit<ServiceRow, "id" | "tenant_id" | "is_active">>(
     service ?? emptyService,
   );
-  const [newStaffName, setNewStaffName] = useState("");
-  const [addingStaff, setAddingStaff] = useState(false);
 
   const update = (
     field: string,
     value: unknown,
   ) =>
     setForm((prev) => ({ ...prev, [field]: value }));
-
-  const toggleStaff = (staffId: string) => {
-    setForm((prev) => ({
-      ...prev,
-      staff_ids: prev.staff_ids.includes(staffId)
-        ? prev.staff_ids.filter((s) => s !== staffId)
-        : [...prev.staff_ids, staffId],
-    }));
-  };
-
-  const handleAddStaff = async () => {
-    if (!newStaffName.trim()) return;
-    setAddingStaff(true);
-    const newStaff = await onAddStaff(newStaffName.trim());
-    if (newStaff) {
-      setForm((prev) => ({
-        ...prev,
-        staff_ids: [...prev.staff_ids, newStaff.id],
-      }));
-      setNewStaffName("");
-    }
-    setAddingStaff(false);
-  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -220,52 +183,6 @@ function ServiceDialog({
               onChange={(e) => update("description", e.target.value)}
               className="min-h-[60px]"
             />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Assigned staff</Label>
-            <div className="flex flex-wrap gap-2">
-              {staffOptions.map((s) => (
-                <button
-                  key={s.id}
-                  type="button"
-                  onClick={() => toggleStaff(s.id)}
-                  className={cn(
-                    "rounded-md border px-2.5 py-1 text-xs font-medium transition-colors",
-                    form.staff_ids.includes(s.id)
-                      ? "border-[var(--cedar)] bg-[var(--mist)] text-[var(--cedar)]"
-                      : "border-[var(--slate)] text-[var(--ash)] hover:border-[var(--border-strong)]",
-                  )}
-                >
-                  {s.name}
-                </button>
-              ))}
-            </div>
-            {/* Inline add staff */}
-            <div className="flex items-center gap-2 mt-2">
-              <Input
-                value={newStaffName}
-                onChange={(e) => setNewStaffName(e.target.value)}
-                placeholder="Add staff member..."
-                className="text-xs"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    void handleAddStaff();
-                  }
-                }}
-              />
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => void handleAddStaff()}
-                disabled={!newStaffName.trim() || addingStaff}
-                className="shrink-0 gap-1"
-              >
-                <Plus className="h-3 w-3" />
-                Add
-              </Button>
-            </div>
           </div>
         </div>
         <DialogFooter>
@@ -598,7 +515,6 @@ export function OfferingsTab() {
 
   const [services, setServices] = useState<ServiceRow[]>([]);
   const [products, setProducts] = useState<ProductRow[]>([]);
-  const [staffOptions, setStaffOptions] = useState<StaffRow[]>([]);
 
   const [editingService, setEditingService] = useState<ServiceRow | null>(
     null,
@@ -620,19 +536,11 @@ export function OfferingsTab() {
       return;
     }
 
-    // Fetch staff
-    const { data: staffRows } = await supabase
-      .from("staff")
-      .select("id, name, is_active")
-      .eq("tenant_id", user.id);
-
-    setStaffOptions(staffRows || []);
-
     if (isService) {
-      // Fetch services with staff assignments
+      // Fetch services
       const { data: svcRows } = await supabase
         .from("services")
-        .select("*, service_staff(staff_id)")
+        .select("*")
         .eq("tenant_id", user.id);
 
       if (svcRows) {
@@ -645,9 +553,6 @@ export function OfferingsTab() {
             duration_minutes: s.duration_minutes,
             price: s.price,
             is_active: s.is_active,
-            staff_ids: (s.service_staff || []).map(
-              (ss: { staff_id: string }) => ss.staff_id,
-            ),
           })),
         );
       }
@@ -713,21 +618,6 @@ export function OfferingsTab() {
         })
         .eq("id", editingService.id);
 
-      // Replace staff assignments
-      await supabase
-        .from("service_staff")
-        .delete()
-        .eq("service_id", editingService.id);
-
-      if (data.staff_ids.length > 0) {
-        await supabase.from("service_staff").insert(
-          data.staff_ids.map((staffId) => ({
-            service_id: editingService.id,
-            staff_id: staffId,
-          })),
-        );
-      }
-
       setServices((prev) =>
         prev.map((s) =>
           s.id === editingService.id
@@ -750,15 +640,6 @@ export function OfferingsTab() {
         .single();
 
       if (newSvc) {
-        if (data.staff_ids.length > 0) {
-          await supabase.from("service_staff").insert(
-            data.staff_ids.map((staffId) => ({
-              service_id: newSvc.id,
-              staff_id: staffId,
-            })),
-          );
-        }
-
         setServices((prev) => [
           ...prev,
           {
@@ -855,28 +736,6 @@ export function OfferingsTab() {
     setEditingProduct(null);
   };
 
-  // ── Staff inline add ──
-
-  const addStaff = async (name: string): Promise<StaffRow | null> => {
-    const supabase = createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) return null;
-
-    const { data: newStaff } = await supabase
-      .from("staff")
-      .insert({ tenant_id: user.id, name })
-      .select()
-      .single();
-
-    if (newStaff) {
-      setStaffOptions((prev) => [...prev, newStaff]);
-      return newStaff;
-    }
-    return null;
-  };
-
   // ── Bulk import ──
 
   const handleBulkImport = async (items: Record<string, unknown>[]): Promise<ImportResult> => {
@@ -944,7 +803,7 @@ export function OfferingsTab() {
       } else if (inserted) {
         successes.push(inserted.id);
         if (isService) {
-          setServices((prev) => [...prev, { ...row, id: inserted.id, is_active: true, staff_ids: [] } as unknown as ServiceRow]);
+          setServices((prev) => [...prev, { ...row, id: inserted.id, is_active: true } as unknown as ServiceRow]);
         } else {
           setProducts((prev) => [...prev, { ...row, id: inserted.id, is_active: true } as unknown as ProductRow]);
         }
@@ -1009,7 +868,6 @@ export function OfferingsTab() {
                     <TableHead>Service</TableHead>
                     <TableHead>Duration</TableHead>
                     <TableHead>Price</TableHead>
-                    <TableHead>Staff</TableHead>
                     <TableHead className="w-20">Active</TableHead>
                     <TableHead className="w-20" />
                   </TableRow>
@@ -1035,24 +893,6 @@ export function OfferingsTab() {
                       </TableCell>
                       <TableCell className="text-sm font-medium font-[family-name:var(--font-jetbrains-mono)] text-[var(--ink)]">
                         ${s.price}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-wrap gap-1">
-                          {s.staff_ids.map((staffId) => {
-                            const staff = staffOptions.find(
-                              (st) => st.id === staffId,
-                            );
-                            return (
-                              <Badge
-                                key={staffId}
-                                variant="secondary"
-                                className="text-[10px]"
-                              >
-                                {staff?.name || "Unknown"}
-                              </Badge>
-                            );
-                          })}
-                        </div>
                       </TableCell>
                       <TableCell>
                         <Switch
@@ -1093,9 +933,7 @@ export function OfferingsTab() {
               if (!v) setEditingService(null);
             }}
             service={editingService}
-            staffOptions={staffOptions}
             onSave={(data) => void saveService(data)}
-            onAddStaff={addStaff}
           />
 
           <BulkImportDialog
