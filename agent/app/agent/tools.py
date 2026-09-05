@@ -198,7 +198,22 @@ def escalate(tenant_id: str, conversation_id: str, reason: str) -> str:
     Use this when the customer explicitly asks to speak to a human, or when
     the situation requires human intervention (e.g. complaint, refund request,
     or repeated technical errors).
+
+    Args:
+        reason: The reason for escalation. Must be exactly one of:
+            - "refund_request": Customer is requesting a refund or return.
+            - "angry_customer": Customer is upset, frustrated, or complaining.
+            - "cant_answer": You don't know the answer or the request is
+              outside your capabilities.
+            - "asks_for_human": Customer directly asked to speak with a person.
+            - "custom": None of the above categories fit. Use as a catch-all.
     """
+    VALID_REASONS = {"refund_request", "angry_customer", "cant_answer", "asks_for_human", "custom"}
+
+    if reason not in VALID_REASONS:
+        print(f"[ESCALATE] Invalid reason '{reason}', defaulting to 'custom'")
+        reason = "custom"
+
     client = get_client()
     client.table("conversations").update(
         {

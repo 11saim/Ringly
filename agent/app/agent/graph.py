@@ -39,6 +39,7 @@ class AgentState(TypedDict):
     contact_id: str
     is_first_message: bool
     iteration_count: int
+    fallback_message: str
 
 
 def _tools_node(state: AgentState) -> dict:
