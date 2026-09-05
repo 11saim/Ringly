@@ -112,26 +112,26 @@ def _call_model(state: AgentState) -> dict:
         elif isinstance(msg, (HumanMessage, AIMessage, ToolMessage)):
             lc_messages.append(msg)
 
-    # DEBUG: print every message being sent to the model
-    print(f"[DEBUG] Messages sent to model ({len(lc_messages)} total):")
-    for i, m in enumerate(lc_messages):
-        if isinstance(m, SystemMessage):
-            print(f"  [{i}] SystemMessage (len={len(m.content)})")
-        elif isinstance(m, HumanMessage):
-            print(f"  [{i}] HumanMessage: {m.content[:120]}")
-        elif isinstance(m, AIMessage):
-            tc = getattr(m, "tool_calls", None) or []
-            print(f"  [{i}] AIMessage (content={repr(m.content[:80])}, tool_calls={[t['name'] for t in tc]})")
-        elif isinstance(m, ToolMessage):
-            print(f"  [{i}] ToolMessage (tool_call_id={m.tool_call_id}): {m.content[:120]}")
-        else:
-            print(f"  [{i}] {type(m).__name__}")
+    # Call the model, catching "prompt too long" errors
+    try:
+        response = llm_with_tools.invoke(lc_messages)
+    except Exception as exc:
+        error_str = str(exc).lower()
+        if "prompt" in error_str and ("too long" in error_str or "length" in error_str or "limit" in error_str or "token" in error_str):
+            print(f"[ERROR] Prompt too long: {exc}")
+            fallback = state.get("fallback_message", "I'm sorry, I'm having trouble right now. Let me connect you with a human team member.")
+            return {
+                "messages": [AIMessage(content=fallback)],
+                "iteration_count": state.get("iteration_count", 0) + 1,
+            }
+        raise
 
-    response = llm_with_tools.invoke(lc_messages)
     iteration_count = state.get("iteration_count", 0) + 1
 
-    print(f"[DEBUG] Model response: content={repr(response.content[:120] if response.content else '')}, "
-          f"tool_calls={[t['name'] for t in (getattr(response, 'tool_calls', None) or [])]}")
+    # Token usage for REPL display
+    usage = getattr(response, "usage_metadata", None) or getattr(response, "response_metadata", {}).get("token_usage", {})
+    if usage:
+        print(f"[DEBUG] Token usage: {usage}")
 
     if iteration_count >= MAX_ITERATIONS:
         return {
@@ -183,13 +183,13 @@ def run_agent(
     user_message: str,
     tenant_id: str,
     conversation_id: str,
-) -> str:
+) -> str | None:
     sb = get_client()
 
-    # Look up contact_id from the conversation (done once per run)
+    # Look up conversation — if already escalated to human, skip agent entirely
     conv = (
         sb.table("conversations")
-        .select("contact_id")
+        .select("contact_id, status")
         .eq("id", conversation_id)
         .eq("tenant_id", tenant_id)
         .single()
@@ -197,11 +197,25 @@ def run_agent(
     )
     contact_id = conv.data["contact_id"]
 
+    if conv.data.get("status") == "human":
+        return None  # already escalated, no reply needed
+
     # Determine if this is the first user message in the conversation
     is_first_message = len(history) == 0
 
     # Build system prompt with greeting/sign-off guidance
     system_prompt = build_system_prompt(tenant_id, is_first_message=is_first_message)
+
+    # Look up fallback message for "prompt too long" recovery
+    persona = (
+        sb.table("agent_persona")
+        .select("fallback_message")
+        .eq("tenant_id", tenant_id)
+        .single()
+        .execute()
+        .data
+    )
+    fallback_message = persona.get("fallback_message") or "I'm sorry, I'm having trouble right now. Let me connect you with a human team member."
 
     messages = history + [{"role": "user", "content": user_message}]
     result = agent_graph.invoke(
@@ -214,6 +228,7 @@ def run_agent(
             "contact_id": contact_id,
             "is_first_message": is_first_message,
             "iteration_count": 0,
+            "fallback_message": fallback_message,
         }
     )
 

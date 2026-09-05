@@ -79,13 +79,71 @@ def check_availability(
 
     Use this when the customer asks if a specific date and time is open,
     or wants to know availability before committing to a booking.
-    Returns "Available" or explains which existing booking causes a conflict.
+    Returns "Available" or explains why the slot is not available
+    (outside business hours, holiday closure, or existing booking conflict).
     """
     client = get_client()
-
     start = datetime.fromisoformat(scheduled_at)
     end = start + timedelta(minutes=duration_minutes)
+    day_of_week = start.weekday()  # 0=Monday .. 6=Sunday
+    date_str = start.date().isoformat()
 
+    # ── 1. Check business hours for this day of week ───────────────
+    hours_row = (
+        client.table("business_hours")
+        .select("is_closed, open_time, close_time")
+        .eq("tenant_id", tenant_id)
+        .eq("day_of_week", day_of_week)
+        .single()
+        .execute()
+        .data
+    )
+
+    if not hours_row or hours_row.get("is_closed"):
+        return (
+            "Not available — the business is closed on this day. "
+            "Please suggest another date."
+        )
+
+    open_time_str = hours_row.get("open_time", "")
+    close_time_str = hours_row.get("close_time", "")
+
+    # Parse open/close times — Postgres returns "HH:MM:SS" for time columns,
+    # so take only the first two parts ("HH:MM") regardless.
+    open_h, open_m = map(int, open_time_str.split(":")[:2])
+    close_h, close_m = map(int, close_time_str.split(":")[:2])
+    req_time = start.time()
+
+    from datetime import time as _time
+    open_t = _time(open_h, open_m)
+    close_t = _time(close_h, close_m)
+
+    if req_time < open_t or req_time >= close_t:
+        return (
+            f"Not available — outside business hours "
+            f"({open_time_str}–{close_time_str}). "
+            f"Please suggest a time within business hours."
+        )
+
+    # ── 2. Check business_hour_exceptions for this specific date ───
+    exc_result = (
+        client.table("business_hour_exceptions")
+        .select("is_closed, label")
+        .eq("tenant_id", tenant_id)
+        .eq("exception_date", date_str)
+        .execute()
+    )
+    exception = exc_result.data[0] if exc_result.data else None
+
+    if exception and exception.get("is_closed"):
+        label = exception.get("label") or ""
+        return (
+            f"Not available — the business is closed on {date_str}"
+            + (f" ({label})" if label else "")
+            + ". Please suggest another date."
+        )
+
+    # ── 3. Check for existing booking conflicts ────────────────────
     result = (
         client.table("bookings")
         .select("scheduled_at, duration_minutes")
@@ -111,6 +169,7 @@ def check_availability(
 @tool
 def create_booking(
     tenant_id: str,
+    contact_id: str,
     service_id: str,
     scheduled_at: str,
     duration_minutes: int,
@@ -127,6 +186,7 @@ def create_booking(
             "agent_create_booking",
             {
                 "p_tenant_id": tenant_id,
+                "p_contact_id": contact_id,
                 "p_service_id": service_id,
                 "p_scheduled_at": scheduled_at,
                 "p_duration_minutes": duration_minutes,
