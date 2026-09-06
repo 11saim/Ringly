@@ -15,7 +15,7 @@ from app.agent.tools import (
     escalate,
 )
 
-MAX_ITERATIONS = 5
+MAX_ITERATIONS = 12
 
 # COMPLETE TOOL LIST — no other tools exist or should be added.
 # - get_services:     read-only catalog lookup (SELECT only)
@@ -68,21 +68,10 @@ def _tools_node(state: AgentState) -> dict:
         result = tool.invoke(tool_args)
         print(f"[TOOL RESULT] {tool_name} -> {result}")
 
-        # If a technical error occurred, auto-escalate
+        # Log technical errors but do NOT auto-escalate — let the model
+        # see the error and decide whether to retry or escalate itself.
         if isinstance(result, str) and result.startswith("TECHNICAL_ERROR:"):
-            print(f"[AUTO-ESCALATE] Technical error in {tool_name}, escalating")
-            escalate.invoke(
-                {
-                    "tenant_id": state["tenant_id"],
-                    "conversation_id": state["conversation_id"],
-                    "reason": "cant_answer",
-                }
-            )
-            result = (
-                "I'm sorry, I'm having a technical issue right now. "
-                "I've connected you with a human team member who can help. "
-                "They'll be with you shortly."
-            )
+            print(f"[WARN] Technical error in {tool_name}")
 
         results.append(
             ToolMessage(content=str(result), tool_call_id=tool_call["id"])

@@ -1,7 +1,33 @@
 from langchain_core.tools import tool
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+import re
 
 from app.supabase_client import get_client
+
+_UUID_RE = re.compile(
+    r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+    re.IGNORECASE,
+)
+
+
+def _validate_uuid(value: str, label: str, retry: bool = False) -> str | None:
+    """Return None if valid, or an error message string if not.
+
+    If retry=True, the message tells the model to fix and retry rather
+    than restart the confirmation flow.
+    """
+    if not value or not _UUID_RE.match(value):
+        if retry:
+            return (
+                f"Invalid {label} (technical error — not your fault). "
+                "Do NOT ask the customer to reconfirm. Simply fix the "
+                f"{label} using a real value from get_services and retry "
+                "the same booking call."
+            )
+        return (
+            f"Invalid {label} — ask the customer to choose from the list again."
+        )
+    return None
 
 
 @tool
@@ -82,8 +108,12 @@ def check_availability(
     Returns "Available" or explains why the slot is not available
     (outside business hours, holiday closure, or existing booking conflict).
     """
+    err = _validate_uuid(service_id, "service selection")
+    if err:
+        return err
+
     client = get_client()
-    start = datetime.fromisoformat(scheduled_at)
+    start = datetime.fromisoformat(scheduled_at).replace(tzinfo=timezone.utc)
     end = start + timedelta(minutes=duration_minutes)
     day_of_week = start.weekday()  # 0=Monday .. 6=Sunday
     date_str = start.date().isoformat()
@@ -143,7 +173,18 @@ def check_availability(
             + ". Please suggest another date."
         )
 
-    # ── 3. Check for existing booking conflicts ────────────────────
+    # ── 3. Check capacity-aware booking conflicts ──────────────────
+    # Fetch service capacity
+    svc_result = (
+        client.table("services")
+        .select("capacity")
+        .eq("id", service_id)
+        .single()
+        .execute()
+    )
+    capacity = (svc_result.data or {}).get("capacity") or 1
+
+    # Count overlapping bookings for this service
     result = (
         client.table("bookings")
         .select("scheduled_at, duration_minutes")
@@ -153,15 +194,22 @@ def check_availability(
         .execute()
     )
 
+    overlap_count = 0
     for booking in result.data:
         b_start = datetime.fromisoformat(booking["scheduled_at"])
+        if b_start.tzinfo is None:
+            b_start = b_start.replace(tzinfo=timezone.utc)
         b_end = b_start + timedelta(minutes=booking["duration_minutes"])
 
         if b_start < end and b_end > start:
-            return (
-                f"Not available — already booked at {b_start.strftime('%Y-%m-%d %H:%M')}. "
-                f"Please suggest another time."
-            )
+            overlap_count += 1
+
+    if overlap_count >= capacity:
+        return (
+            f"Not available — this time slot is fully booked "
+            f"({overlap_count}/{capacity} spots taken). "
+            f"Please suggest another time."
+        )
 
     return "Available"
 
@@ -179,7 +227,38 @@ def create_booking(
     Use this when the customer wants to confirm a booking and you have all
     required details: service (a real UUID from get_services), date/time,
     and duration.
+
+    Each booking is for exactly ONE person and ONE service at ONE time.
+    There is no way to combine multiple people or multiple services into
+    a single booking. If a customer wants multiple people booked, or one
+    person booked for multiple services, you must call create_booking
+    separately for each person+service combination — e.g. 2 people wanting
+    the same service is 2 separate create_booking calls; 1 person wanting
+    2 services is also 2 separate calls, at back-to-back or the customer's
+    preferred times. Never propose or imply a 'combined' booking that merges
+    multiple people or services into one appointment — that doesn't exist
+    in this system. When a request is complex (multiple people/services),
+    clearly summarize each individual booking you're about to create one by
+    one before confirming, so the customer understands exactly what will
+    happen.
     """
+    err = _validate_uuid(service_id, "service_id", retry=True)
+    if err:
+        return err
+    err = _validate_uuid(contact_id, "contact_id", retry=True)
+    if err:
+        return err
+
+    # Validate scheduled_at is a real ISO timestamp before hitting the database
+    try:
+        datetime.fromisoformat(scheduled_at)
+    except (ValueError, TypeError):
+        return (
+            f"TECHNICAL_ERROR: '{scheduled_at}' is not a valid date/time. "
+            "Do NOT ask the customer to reconfirm. Fix the date/time using "
+            "a real ISO timestamp and retry the same booking call."
+        )
+
     client = get_client()
     try:
         result = client.rpc(
@@ -201,16 +280,17 @@ def create_booking(
         )
     except Exception as exc:
         error_msg = str(exc).lower()
-        if "already booked" in error_msg or "conflict" in error_msg:
+        if "already booked" in error_msg or "conflict" in error_msg or "fully booked" in error_msg:
             return (
-                "That time slot is already booked. "
-                "Please suggest another time to the customer."
+                "That time slot is fully booked. "
+                "Do NOT ask the customer to reconfirm — simply suggest "
+                "another time and retry with corrected data."
             )
         return (
             f"TECHNICAL_ERROR: {exc}. "
-            "A system error occurred. Apologize to the customer, "
-            "let them know you're having trouble completing this right now, "
-            "and offer to have someone follow up."
+            "Do NOT ask the customer to reconfirm. If this is a validation "
+            "error, fix the data and retry. Otherwise apologize once and "
+            "offer to have someone follow up."
         )
 
 
@@ -221,6 +301,24 @@ def create_order(tenant_id: str, items: list) -> str:
     Use this when the customer wants to buy products and you have the list
     of items (each with a real product_id from get_services and a quantity).
     """
+    # Validate items structure before hitting the database
+    if not isinstance(items, list) or len(items) == 0:
+        return (
+            "TECHNICAL_ERROR: No items provided for the order. "
+            "Ask the customer what products they'd like to order."
+        )
+    for i, item in enumerate(items):
+        if not isinstance(item, dict):
+            return (
+                f"TECHNICAL_ERROR: Item {i+1} is not valid. "
+                "Each item must be a product with a quantity."
+            )
+        if not item.get("product_id") or not item.get("quantity"):
+            return (
+                f"TECHNICAL_ERROR: Item {i+1} is missing product_id or quantity. "
+                "Ask the customer which products they want and how many."
+            )
+
     client = get_client()
     try:
         result = client.rpc(
