@@ -15,7 +15,7 @@ import contextlib
 sys.path.insert(0, ".")
 
 from app.supabase_client import get_client
-from app.agent.graph import run_agent, TOOLS
+from app.agent.graph import run_agent, ALL_TOOLS
 from app.agent.persona import build_system_prompt
 
 
@@ -65,7 +65,7 @@ def main():
 
     # Print available tools once
     print("=== TOOLS AVAILABLE ===")
-    for t in TOOLS:
+    for t in ALL_TOOLS:
         print(f"  {t.name}: {_tool_summary(t)}")
     print()
 

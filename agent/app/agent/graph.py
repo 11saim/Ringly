@@ -12,22 +12,34 @@ from app.agent.tools import (
     check_availability,
     create_booking,
     create_order,
+    reschedule_booking,
+    cancel_booking,
+    cancel_order,
     escalate,
 )
 
 MAX_ITERATIONS = 12
 
 # COMPLETE TOOL LIST — no other tools exist or should be added.
-# - get_services:     read-only catalog lookup (SELECT only)
-# - check_availability: read-only slot check (SELECT only)
-# - create_booking:   writes a booking row via RPC
-# - create_order:     writes an order row via RPC
-# - escalate:         updates conversation status to human
-TOOLS = [get_services, check_availability, create_booking, create_order, escalate]
-TOOLS_BY_NAME = {t.name: t for t in TOOLS}
+# - get_services:       read-only catalog lookup (SELECT only)
+# - check_availability:  read-only slot check (SELECT only)
+# - create_booking:     writes a booking row via RPC
+# - create_order:       writes an order row via RPC
+# - reschedule_booking: moves an existing booking via RPC
+# - cancel_booking:     cancels an existing booking via RPC
+# - cancel_order:       cancels an existing order via RPC
+# - escalate:           updates conversation status to human
+ALL_TOOLS = [get_services, check_availability, create_booking, create_order, reschedule_booking, cancel_booking, cancel_order, escalate]
+
+# Business-type tool subsets — product tenants never get booking tools,
+# service tenants never get order tools.
+_SERVICE_TOOLS = [get_services, check_availability, create_booking, reschedule_booking, cancel_booking, escalate]
+_PRODUCT_TOOLS = [get_services, create_order, cancel_order, escalate]
+
+TOOLS_BY_NAME = {t.name: t for t in ALL_TOOLS}
 
 # Tools that receive contact_id automatically (the model never supplies it)
-_CONTACT_TOOLS = {"create_booking", "create_order"}
+_CONTACT_TOOLS = {"create_booking", "create_order", "reschedule_booking", "cancel_booking", "cancel_order"}
 
 
 class AgentState(TypedDict):
@@ -37,6 +49,7 @@ class AgentState(TypedDict):
     tenant_id: str
     conversation_id: str
     contact_id: str
+    business_type: str
     is_first_message: bool
     iteration_count: int
     fallback_message: str
@@ -53,7 +66,7 @@ def _tools_node(state: AgentState) -> dict:
         tool_args = dict(tool_call["args"])
 
         # Inject tenant_id for all tools that need it
-        if tool_name in ("get_services", "check_availability", "create_booking", "create_order"):
+        if tool_name in ("get_services", "check_availability", "create_booking", "create_order", "reschedule_booking", "cancel_booking", "cancel_order"):
             tool_args["tenant_id"] = state["tenant_id"]
         elif tool_name == "escalate":
             tool_args["tenant_id"] = state["tenant_id"]
@@ -86,7 +99,10 @@ def _call_model(state: AgentState) -> dict:
         api_key=OLLAMA_API_KEY,
         base_url="https://ollama.com/v1",
     )
-    llm_with_tools = llm.bind_tools(TOOLS)
+
+    # Bind only the tools relevant to this tenant's business type
+    tools = _SERVICE_TOOLS if state.get("business_type") == "service" else _PRODUCT_TOOLS
+    llm_with_tools = llm.bind_tools(tools)
 
     # Build the full message list for the model
     lc_messages = [SystemMessage(content=state["system_prompt"])]
@@ -189,6 +205,17 @@ def run_agent(
     if conv.data.get("status") == "human":
         return None  # already escalated, no reply needed
 
+    # Fetch business_type to select the right tool subset
+    tenant_row = (
+        sb.table("tenants")
+        .select("business_type")
+        .eq("id", tenant_id)
+        .single()
+        .execute()
+        .data
+    )
+    business_type = (tenant_row or {}).get("business_type") or "service"
+
     # Determine if this is the first user message in the conversation
     is_first_message = len(history) == 0
 
@@ -215,6 +242,7 @@ def run_agent(
             "tenant_id": tenant_id,
             "conversation_id": conversation_id,
             "contact_id": contact_id,
+            "business_type": business_type,
             "is_first_message": is_first_message,
             "iteration_count": 0,
             "fallback_message": fallback_message,

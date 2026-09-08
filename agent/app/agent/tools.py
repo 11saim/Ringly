@@ -4,6 +4,22 @@ import re
 
 from app.supabase_client import get_client
 
+_VALID_MINUTES = {0, 15, 30, 45}
+
+
+def _validate_slot_grid(scheduled_at: str) -> str | None:
+    """Return None if on a 15-minute boundary, or an error message."""
+    try:
+        dt = datetime.fromisoformat(scheduled_at)
+    except (ValueError, TypeError):
+        return None  # let the caller's own timestamp validation handle it
+    if dt.minute not in _VALID_MINUTES:
+        return (
+            "Bookings must start on the hour or at :15, :30, or :45 — "
+            "please suggest the nearest valid time."
+        )
+    return None
+
 _UUID_RE = re.compile(
     r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
     re.IGNORECASE,
@@ -111,6 +127,10 @@ def check_availability(
     err = _validate_uuid(service_id, "service selection")
     if err:
         return err
+
+    slot_err = _validate_slot_grid(scheduled_at)
+    if slot_err:
+        return slot_err
 
     client = get_client()
     start = datetime.fromisoformat(scheduled_at).replace(tzinfo=timezone.utc)
@@ -259,6 +279,10 @@ def create_booking(
             "a real ISO timestamp and retry the same booking call."
         )
 
+    slot_err = _validate_slot_grid(scheduled_at)
+    if slot_err:
+        return slot_err
+
     client = get_client()
     try:
         result = client.rpc(
@@ -295,7 +319,7 @@ def create_booking(
 
 
 @tool
-def create_order(tenant_id: str, items: list) -> str:
+def create_order(tenant_id: str, contact_id: str, items: list) -> str:
     """Place an order for the customer.
 
     Use this when the customer wants to buy products and you have the list
@@ -325,6 +349,7 @@ def create_order(tenant_id: str, items: list) -> str:
             "agent_create_order",
             {
                 "p_tenant_id": tenant_id,
+                "p_contact_id": contact_id,
                 "p_items": items,
             },
         ).execute()
@@ -346,6 +371,151 @@ def create_order(tenant_id: str, items: list) -> str:
             "A system error occurred. Apologize to the customer, "
             "let them know you're having trouble completing this right now, "
             "and offer to have someone follow up."
+        )
+
+
+@tool
+def reschedule_booking(
+    tenant_id: str,
+    contact_id: str,
+    booking_id: str,
+    new_scheduled_at: str,
+) -> str:
+    """Reschedule an existing booking to a new date/time.
+
+    Use this when the customer wants to change the time of an existing
+    booking. You need the booking_id (returned when create_booking succeeded)
+    and the new date/time. The booking must belong to this customer.
+    """
+    err = _validate_uuid(booking_id, "booking_id", retry=True)
+    if err:
+        return err
+
+    try:
+        datetime.fromisoformat(new_scheduled_at)
+    except (ValueError, TypeError):
+        return (
+            f"TECHNICAL_ERROR: '{new_scheduled_at}' is not a valid date/time. "
+            "Fix the date/time and retry."
+        )
+
+    slot_err = _validate_slot_grid(new_scheduled_at)
+    if slot_err:
+        return slot_err
+
+    client = get_client()
+    try:
+        result = client.rpc(
+            "agent_reschedule_booking",
+            {
+                "p_tenant_id": tenant_id,
+                "p_contact_id": contact_id,
+                "p_booking_id": booking_id,
+                "p_new_scheduled_at": new_scheduled_at,
+            },
+        ).execute()
+        booking = result.data
+        return (
+            f"Booking rescheduled successfully! "
+            f"New time: {booking.get('scheduled_at', new_scheduled_at)}. "
+            f"Booking ID: {booking.get('id', 'N/A')}."
+        )
+    except Exception as exc:
+        error_msg = str(exc).lower()
+        if "not found" in error_msg:
+            return (
+                "Booking not found — it may have already been cancelled or "
+                "does not belong to this customer. Please check the booking "
+                "ID and try again."
+            )
+        if "fully booked" in error_msg or "conflict" in error_msg:
+            return (
+                "That time slot is fully booked. "
+                "Suggest another time and retry."
+            )
+        return (
+            f"TECHNICAL_ERROR: {exc}. "
+            "Apologize to the customer and offer to have someone follow up."
+        )
+
+
+@tool
+def cancel_booking(tenant_id: str, contact_id: str, booking_id: str) -> str:
+    """Cancel an existing booking.
+
+    Use this when the customer wants to cancel a booking. You need the
+    booking_id (returned when create_booking succeeded). The booking must
+    belong to this customer.
+    """
+    err = _validate_uuid(booking_id, "booking_id", retry=True)
+    if err:
+        return err
+
+    client = get_client()
+    try:
+        result = client.rpc(
+            "agent_cancel_booking",
+            {
+                "p_tenant_id": tenant_id,
+                "p_contact_id": contact_id,
+                "p_booking_id": booking_id,
+            },
+        ).execute()
+        booking = result.data
+        return (
+            f"Booking cancelled successfully. "
+            f"Booking ID: {booking.get('id', 'N/A')}."
+        )
+    except Exception as exc:
+        error_msg = str(exc).lower()
+        if "not found" in error_msg:
+            return (
+                "Booking not found — it may have already been cancelled or "
+                "does not belong to this customer."
+            )
+        return (
+            f"TECHNICAL_ERROR: {exc}. "
+            "Apologize to the customer and offer to have someone follow up."
+        )
+
+
+@tool
+def cancel_order(tenant_id: str, contact_id: str, order_id: str) -> str:
+    """Cancel an existing order.
+
+    Use this when the customer wants to cancel an order. You need the
+    order_id (returned when create_order succeeded). The order must
+    belong to this customer.
+    """
+    err = _validate_uuid(order_id, "order_id", retry=True)
+    if err:
+        return err
+
+    client = get_client()
+    try:
+        result = client.rpc(
+            "agent_cancel_order",
+            {
+                "p_tenant_id": tenant_id,
+                "p_contact_id": contact_id,
+                "p_order_id": order_id,
+            },
+        ).execute()
+        order = result.data
+        return (
+            f"Order cancelled successfully. "
+            f"Order ID: {order.get('id', 'N/A')}."
+        )
+    except Exception as exc:
+        error_msg = str(exc).lower()
+        if "not found" in error_msg:
+            return (
+                "Order not found — it may have already been cancelled or "
+                "does not belong to this customer."
+            )
+        return (
+            f"TECHNICAL_ERROR: {exc}. "
+            "Apologize to the customer and offer to have someone follow up."
         )
 
 

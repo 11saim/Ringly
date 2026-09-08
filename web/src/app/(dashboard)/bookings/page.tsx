@@ -1060,30 +1060,53 @@ export default function BookingsPage() {
         const statusOnlyChange = !itemsChanged && !contactChanged;
 
         if (statusOnlyChange) {
-          const { data, error } = await supabase
-            .from("orders")
-            .update({ status: form.status })
-            .eq("id", editingOrder.id)
-            .select(
-              "*, contacts(name), order_items(quantity, unit_price, product_id, products(name))",
-            )
-            .single();
+          // If cancelling, use the RPC so products get restocked
+          if (form.status === "cancelled") {
+            const { data, error } = await supabase.rpc("cancel_order", {
+              p_order_id: editingOrder.id,
+            });
+            if (error) return { error: error.message };
 
-          if (error) return { error: error.message };
-          setRawOrders((prev) =>
-            prev.map((o) =>
-              o.id === editingOrder.id ? (data as DbOrderRow) : o,
-            ),
-          );
+            const { data: fullOrder } = await supabase
+              .from("orders")
+              .select(
+                "*, contacts(name), order_items(quantity, unit_price, product_id, products(name))",
+              )
+              .eq("id", editingOrder.id)
+              .single();
+
+            setRawOrders((prev) =>
+              prev.map((o) =>
+                o.id === editingOrder.id
+                  ? ((fullOrder ?? data) as DbOrderRow)
+                  : o,
+              ),
+            );
+          } else {
+            const { data, error } = await supabase
+              .from("orders")
+              .update({ status: form.status })
+              .eq("id", editingOrder.id)
+              .select(
+                "*, contacts(name), order_items(quantity, unit_price, product_id, products(name))",
+              )
+              .single();
+
+            if (error) return { error: error.message };
+            setRawOrders((prev) =>
+              prev.map((o) =>
+                o.id === editingOrder.id ? (data as DbOrderRow) : o,
+              ),
+            );
+          }
           setEditingOrder(null);
           return {};
         }
 
         // Items or contact changed — cancel old order, create new via RPC (triggers stock check)
-        const { error: cancelError } = await supabase
-          .from("orders")
-          .update({ status: "cancelled" })
-          .eq("id", editingOrder.id);
+        const { error: cancelError } = await supabase.rpc("cancel_order", {
+          p_order_id: editingOrder.id,
+        });
 
         if (cancelError) return { error: cancelError.message };
 
