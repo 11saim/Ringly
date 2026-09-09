@@ -35,7 +35,7 @@ def build_system_prompt(tenant_id: str, is_first_message: bool = False) -> str:
 
     policies = (
         sb.table("policies")
-        .select("cancellation_policy, refund_policy")
+        .select("cancellation_policy, refund_policy, escalation_notify_target")
         .eq("tenant_id", tenant_id)
         .single()
         .execute()
@@ -47,7 +47,8 @@ def build_system_prompt(tenant_id: str, is_first_message: bool = False) -> str:
         sb.table("tenants")
         .select(
             "business_name, description, address, "
-            "support_email, support_phone, website_url, business_type, timezone"
+            "support_email, support_phone, website_url, business_type, timezone, "
+            "industry, social_links, currency"
         )
         .eq("id", tenant_id)
         .single()
@@ -123,20 +124,40 @@ def build_system_prompt(tenant_id: str, is_first_message: bool = False) -> str:
     support_email = tenant.get("support_email") or ""
     support_phone = tenant.get("support_phone") or ""
     website = tenant.get("website_url") or ""
+    industry = tenant.get("industry") or ""
+    social_links = tenant.get("social_links") or {}
+    currency = tenant.get("currency") or "USD"
 
     biz_lines = ["\nAbout this business:"]
-    if biz_name:
-        biz_lines.append(f"- Name: {biz_name}")
-    if biz_desc:
-        biz_lines.append(f"- Description: {biz_desc}")
-    if biz_address:
-        biz_lines.append(f"- Address: {biz_address}")
-    if support_email:
-        biz_lines.append(f"- Support email: {support_email}")
-    if support_phone:
-        biz_lines.append(f"- Support phone: {support_phone}")
-    if website:
-        biz_lines.append(f"- Website: {website}")
+    biz_lines.append(f"- Name: {biz_name or 'Not provided'}")
+    biz_lines.append(f"- Description: {biz_desc or 'Not provided'}")
+    biz_lines.append(
+        f"- Address: {biz_address or 'Not provided (this business may not have a physical location, or operates online/delivery-only)'}"
+    )
+    biz_lines.append(
+        f"- Support email: {support_email or 'Not provided'}"
+    )
+    biz_lines.append(
+        f"- Support phone: {support_phone or 'Not provided'}"
+    )
+    biz_lines.append(
+        f"- Website: {website or 'Not provided'}"
+    )
+    biz_lines.append(f"- Industry: {industry or 'Not provided'}")
+    biz_lines.append(f"- Currency: {currency}")
+
+    # Social links — include if any are set, otherwise note absence
+    if social_links:
+        link_parts = []
+        for platform, url in social_links.items():
+            if url:
+                link_parts.append(f"{platform}: {url}")
+        if link_parts:
+            biz_lines.append("- Social links: " + ", ".join(link_parts))
+        else:
+            biz_lines.append("- Social links: Not provided")
+    else:
+        biz_lines.append("- Social links: Not provided")
 
     # Business hours
     hours_str = _format_business_hours(hours_rows)
@@ -193,6 +214,36 @@ def build_system_prompt(tenant_id: str, is_first_message: bool = False) -> str:
     else:
         parts.append("Do not use emojis.")
 
+    parts.append(
+        "\nHANDLING REQUESTS YOU CAN'T DIRECTLY FULFILL:\n"
+        "When a customer asks for something you don't have information "
+        "for, or asks for something this business doesn't offer (e.g. a "
+        "product on a service-based business, or a service on a "
+        "product-based business), do NOT simply refuse or escalate. Instead, "
+        "respond the way a knowledgeable, friendly staff member would:\n"
+        "1. Acknowledge what they asked.\n"
+        "2. Honestly state what's actually true, using only real "
+        "information you have (the business info above, or a tool "
+        "result) — never invent details to fill a gap.\n"
+        "3. Redirect toward what you CAN actually help with.\n\n"
+        "Example pattern: 'We're actually a [type] business, so we don't "
+        "[offer bookings / sell products] — but I'd be happy to help you "
+        "with [what they do offer] instead.'\n\n"
+        "For information you simply don't have (like an unlisted address), "
+        "say so plainly and offer an alternative if one exists (e.g. the "
+        "support email/phone) — never say you'll 'get back to them' or "
+        "'check on that,' since you have no way to actually follow up "
+        "outside this conversation.\n\n"
+        "Reserve escalate() and the configured fallback message for "
+        "situations that genuinely require a human: the customer explicitly "
+        "asks for one, a technical error can't be resolved after retries, or "
+        "a request is truly outside anything you can address even by "
+        "explaining what's actually available. A mismatched request (wrong "
+        "business type, an unlisted detail) is NOT, by itself, a reason to "
+        "escalate — it's a reason to explain clearly and move the "
+        "conversation forward."
+    )
+
     parts.append(f"If you cannot help, say: \"{fallback}\"")
 
     if banned_terms:
@@ -200,8 +251,13 @@ def build_system_prompt(tenant_id: str, is_first_message: bool = False) -> str:
 
     if cancellation:
         parts.append(f"\nCancellation policy:\n{cancellation}")
+    else:
+        parts.append("\nCancellation policy: Not provided")
+
     if refund:
         parts.append(f"\nRefund policy:\n{refund}")
+    else:
+        parts.append("\nRefund policy: Not provided")
 
     # ── Business-type scope ─────────────────────────────────────────
     if business_type == "product":
