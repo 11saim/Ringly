@@ -95,7 +95,7 @@ def _tools_node(state: AgentState) -> dict:
 
 def _call_model(state: AgentState) -> dict:
     llm = ChatOpenAI(
-        model="gpt-oss:20b-cloud",
+        model="gpt-oss:120b-cloud",
         api_key=OLLAMA_API_KEY,
         base_url="https://ollama.com/v1",
     )
