@@ -31,12 +31,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { createClient } from "@/lib/supabase/client";
+import { triggerEmbed } from "@/lib/agent";
 import { cn } from "@/lib/utils";
 
 interface Faq {
   id: string;
   question: string;
   answer: string;
+  embedded?: boolean;
 }
 
 interface Document {
@@ -281,6 +283,7 @@ export function KnowledgeBaseTab() {
   const [loading, setLoading] = useState(true);
 
   const [faqs, setFaqs] = useState<Faq[]>([]);
+  const [embeddedFaqIds, setEmbeddedFaqIds] = useState<Set<string>>(new Set());
   const [newQuestion, setNewQuestion] = useState("");
   const [newAnswer, setNewAnswer] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -315,6 +318,16 @@ export function KnowledgeBaseTab() {
       .eq("tenant_id", user.id);
 
     if (faqRows) setFaqs(faqRows);
+
+    const { data: embeddedRows } = await supabase
+      .from("kb_embeddings")
+      .select("source_faq_id")
+      .eq("tenant_id", user.id)
+      .not("source_faq_id", "is", null);
+
+    if (embeddedRows) {
+      setEmbeddedFaqIds(new Set(embeddedRows.map((r) => r.source_faq_id)));
+    }
 
     const { data: docRows } = await supabase
       .from("kb_documents")
@@ -376,6 +389,7 @@ export function KnowledgeBaseTab() {
 
     if (newFaq) {
       setFaqs((prev) => [...prev, newFaq]);
+      triggerEmbed(user.id, "faq", newFaq.id);
     }
     setNewQuestion("");
     setNewAnswer("");
@@ -463,6 +477,7 @@ export function KnowledgeBaseTab() {
       } else if (inserted) {
         successes.push(inserted.id);
         setFaqs((prev) => [...prev, { id: inserted.id, question: inserted.question, answer: inserted.answer }]);
+        triggerEmbed(user.id, "faq", inserted.id);
       }
     }
 
@@ -558,6 +573,7 @@ export function KnowledgeBaseTab() {
             signedUrl: urlData?.signedUrl ?? null,
           },
         ]);
+        triggerEmbed(user.id, "document", newDoc.id);
       }
 
       setUploadingFiles((prev) => prev.filter((f) => f.id !== uploadId));
@@ -580,7 +596,7 @@ export function KnowledgeBaseTab() {
     } = await supabase.auth.getUser();
     if (!user) return;
 
-    const { data: newDoc } = await supabase
+    const { data: newDoc, error } = await supabase
       .from("kb_documents")
       .insert({
         tenant_id: user.id,
@@ -592,6 +608,11 @@ export function KnowledgeBaseTab() {
       .select()
       .single();
 
+    if (error) {
+      console.error("Failed to insert kb_documents row:", error.message);
+      return;
+    }
+
     if (newDoc) {
       setDocuments((prev) => [
         ...prev,
@@ -602,6 +623,7 @@ export function KnowledgeBaseTab() {
           status: "pending",
         },
       ]);
+      triggerEmbed(user.id, "document", newDoc.id);
     }
     setPasteText("");
     setPasteTitle("");
@@ -693,6 +715,17 @@ export function KnowledgeBaseTab() {
                         {faq.answer}
                       </p>
                     </div>
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        "text-[10px] border-0 shrink-0",
+                        embeddedFaqIds.has(faq.id)
+                          ? "bg-[var(--mist)] text-[var(--cedar)]"
+                          : "bg-[var(--amber)]/10 text-[var(--amber)]",
+                      )}
+                    >
+                      {embeddedFaqIds.has(faq.id) ? "Embedded" : "Indexing..."}
+                    </Badge>
                     <button
                       onClick={() => void deleteFaq(faq.id)}
                       className="p-1.5 rounded opacity-0 group-hover:opacity-100 hover:bg-hover-bg transition-all"

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, Rocket } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
+import { triggerEmbed } from "@/lib/agent";
 import {
   type OnboardingData,
   defaultOnboardingData,
@@ -213,10 +214,16 @@ export default function OnboardingPage() {
           question: f.question,
           answer: f.answer,
         }));
-        const { error: faqErr } = await supabase
+        const { data: insertedFaqs, error: faqErr } = await supabase
           .from("kb_faqs")
-          .insert(faqRows);
+          .insert(faqRows)
+          .select("id");
         if (faqErr) throw faqErr;
+        if (insertedFaqs) {
+          for (const faq of insertedFaqs) {
+            triggerEmbed(user.id, "faq", faq.id);
+          }
+        }
       }
 
       // 8. Insert pasted documents
@@ -227,10 +234,16 @@ export default function OnboardingPage() {
           raw_text: d.rawText,
           status: "pending" as const,
         }));
-        const { error: docErr } = await supabase
+        const { data: insertedDocs, error: docErr } = await supabase
           .from("kb_documents")
-          .insert(docRows);
+          .insert(docRows)
+          .select("id");
         if (docErr) throw docErr;
+        if (insertedDocs) {
+          for (const doc of insertedDocs) {
+            triggerEmbed(user.id, "document", doc.id);
+          }
+        }
       }
 
       router.push("/overview");
