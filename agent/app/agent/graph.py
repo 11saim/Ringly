@@ -16,25 +16,27 @@ from app.agent.tools import (
     cancel_booking,
     cancel_order,
     escalate,
+    search_knowledge_base,
 )
 
 MAX_ITERATIONS = 12
 
 # COMPLETE TOOL LIST — no other tools exist or should be added.
-# - get_services:       read-only catalog lookup (SELECT only)
-# - check_availability:  read-only slot check (SELECT only)
-# - create_booking:     writes a booking row via RPC
-# - create_order:       writes an order row via RPC
-# - reschedule_booking: moves an existing booking via RPC
-# - cancel_booking:     cancels an existing booking via RPC
-# - cancel_order:       cancels an existing order via RPC
-# - escalate:           updates conversation status to human
-ALL_TOOLS = [get_services, check_availability, create_booking, create_order, reschedule_booking, cancel_booking, cancel_order, escalate]
+# - get_services:             read-only catalog lookup (SELECT only)
+# - check_availability:       read-only slot check (SELECT only)
+# - search_knowledge_base:    read-only KB search (embeds query, RPC search)
+# - create_booking:           writes a booking row via RPC
+# - create_order:             writes an order row via RPC
+# - reschedule_booking:       moves an existing booking via RPC
+# - cancel_booking:           cancels an existing booking via RPC
+# - cancel_order:             cancels an existing order via RPC
+# - escalate:                 updates conversation status to human
+ALL_TOOLS = [get_services, check_availability, create_booking, create_order, reschedule_booking, cancel_booking, cancel_order, escalate, search_knowledge_base]
 
 # Business-type tool subsets — product tenants never get booking tools,
-# service tenants never get order tools.
-_SERVICE_TOOLS = [get_services, check_availability, create_booking, reschedule_booking, cancel_booking, escalate]
-_PRODUCT_TOOLS = [get_services, create_order, cancel_order, escalate]
+# service tenants never get order tools. Both get KB search.
+_SERVICE_TOOLS = [get_services, check_availability, create_booking, reschedule_booking, cancel_booking, escalate, search_knowledge_base]
+_PRODUCT_TOOLS = [get_services, create_order, cancel_order, escalate, search_knowledge_base]
 
 TOOLS_BY_NAME = {t.name: t for t in ALL_TOOLS}
 
@@ -66,7 +68,7 @@ def _tools_node(state: AgentState) -> dict:
         tool_args = dict(tool_call["args"])
 
         # Inject tenant_id for all tools that need it
-        if tool_name in ("get_services", "check_availability", "create_booking", "create_order", "reschedule_booking", "cancel_booking", "cancel_order"):
+        if tool_name in ("get_services", "check_availability", "create_booking", "create_order", "reschedule_booking", "cancel_booking", "cancel_order", "search_knowledge_base"):
             tool_args["tenant_id"] = state["tenant_id"]
         elif tool_name == "escalate":
             tool_args["tenant_id"] = state["tenant_id"]

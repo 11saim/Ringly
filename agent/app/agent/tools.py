@@ -1,8 +1,12 @@
 from langchain_core.tools import tool
 from datetime import datetime, timedelta, timezone
+import logging
 import re
 
 from app.supabase_client import get_client
+from app.kb.embed import embed_text
+
+log = logging.getLogger(__name__)
 
 _VALID_MINUTES = {0, 15, 30, 45}
 
@@ -555,3 +559,73 @@ def escalate(tenant_id: str, conversation_id: str, reason: str) -> str:
         "I've connected you with a human team member. "
         "They'll pick this up shortly. Thank you for your patience!"
     )
+
+
+@tool
+def search_knowledge_base(tenant_id: str, query: str) -> str:
+    """Search the business's knowledge base for relevant information.
+
+    Use this tool whenever a customer asks something that might be covered
+    by FAQs, uploaded documents, or pasted text content — e.g. specific
+    policies, detailed product/service info, operating procedures, or any
+    question not already answered by get_services or the business info in
+    your system prompt.
+
+    Returns relevant text chunks from the knowledge base, or a message
+    if nothing relevant is found. Use the exact information returned —
+    do not guess or invent details.
+    """
+    try:
+        query_embedding = embed_text(query)
+    except Exception as exc:
+        log.warning("Failed to embed query: %s", exc)
+        return (
+            "No relevant information found in the knowledge base for this query."
+        )
+
+    client = get_client()
+    try:
+        result = client.rpc(
+            "match_kb_embeddings",
+            {
+                "p_tenant_id": tenant_id,
+                "p_query_embedding": query_embedding,
+                "p_match_count": 5,
+            },
+        ).execute()
+    except Exception as exc:
+        log.warning("Failed to search kb_embeddings: %s", exc)
+        return (
+            "No relevant information found in the knowledge base for this query."
+        )
+
+    matches = result.data or []
+    good = [m for m in matches if (m.get("similarity") or 0) > 0.5]
+
+    if not good:
+        return (
+            "No relevant information found in the knowledge base for this query."
+        )
+
+    # Best-effort: increment usage_count for matched FAQs
+    for m in good:
+        faq_id = m.get("source_faq_id")
+        if faq_id:
+            try:
+                row = (
+                    client.table("kb_faqs")
+                    .select("usage_count")
+                    .eq("id", faq_id)
+                    .single()
+                    .execute()
+                    .data
+                )
+                current = (row or {}).get("usage_count") or 0
+                client.table("kb_faqs").update(
+                    {"usage_count": current + 1}
+                ).eq("id", faq_id).execute()
+            except Exception:
+                log.debug("Could not increment usage_count for faq %s", faq_id)
+
+    chunks = [m["content"] for m in good]
+    return "\n\n---\n\n".join(chunks)
